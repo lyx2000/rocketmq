@@ -1,0 +1,30 @@
+<settings>
+    <servers>
+        <server>
+            <id>serverless-100005712758-hellocorp-rocketmq</id>
+            <username>${env.MAVEN_USERNAME}</username>
+            <password>${env.MAVEN_PASSWORD}</password>
+        </server>
+    </servers>
+    <profiles>
+        <profile>
+            <id>Repository Proxy</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>serverless-100005712758-hellocorp-rocketmq</id>
+                    <name>rocketmq</name>
+                    <url>https://serverless-100005712758-maven.pkg.coding.net/repository/hellocorp/rocketmq/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+</settings>
