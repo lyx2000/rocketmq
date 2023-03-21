@@ -192,7 +192,14 @@
         <module>proxy</module>
         <module>tieredstore</module>
     </modules>
-
+    <distributionManagement>
+        <repository>
+            <!--必须与 settings.xml 的 id 一致-->
+            <id>serverless-100005712758-hellocorp-rocketmq</id>
+            <name>rocketmq</name>
+            <url>https://serverless-100005712758-maven.pkg.coding.net/repository/hellocorp/rocketmq/</url>
+        </repository>
+    </distributionManagement>
     <build>
         <plugins>
             <plugin>
@@ -1020,4 +1027,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+
+
 </project>
