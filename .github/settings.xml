@@ -14,6 +14,16 @@
             </activation>
             <repositories>
                 <repository>
+                    <id>central</id>
+                    <url>https://repo.maven.apache.org/maven2</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
                     <id>serverless-100005712758-hellocorp-rocketmq</id>
                     <name>rocketmq</name>
                     <url>https://serverless-100005712758-maven.pkg.coding.net/repository/hellocorp/rocketmq/</url>
@@ -25,6 +35,11 @@
                     </snapshots>
                 </repository>
             </repositories>
+            <repositoryOrder>central,serverless-100005712758-hellocorp-rocketmq</repositoryOrder>
         </profile>
     </profiles>
+    <activeProfiles>
+        <activeProfile>Repository Proxy</activeProfile>
+    </activeProfiles>
+
 </settings>
