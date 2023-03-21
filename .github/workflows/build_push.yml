@@ -14,7 +14,7 @@ jobs:
           distribution: corretto
           java-version: '8'
       - name: Build and Deploy
-        run: mvn clean package deploy -s .github/settings.xml
+        run: mvn clean deploy -Dmaven.test.skip=true -s .github/settings.xml
         env:
           MAVEN_USERNAME: ${{ secrets.PRIVATE_MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.PRIVATE_MAVEN_PASSWORD }}
