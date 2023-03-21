@@ -200,6 +200,11 @@
             <name>rocketmq</name>
             <url>https://serverless-100005712758-maven.pkg.coding.net/repository/hellocorp/rocketmq/</url>
         </repository>
+        <snapshotRepository>
+            <id>serverless-100005712758-hellocorp-rocketmq</id>
+            <name>rocketmq-snapshot</name>
+            <url>https://serverless-100005712758-maven.pkg.coding.net/repository/hellocorp/rocketmq/</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <build>
