@@ -35,7 +35,6 @@
                     </snapshots>
                 </repository>
             </repositories>
-            <repositoryOrder>central,serverless-100005712758-hellocorp-rocketmq</repositoryOrder>
         </profile>
     </profiles>
     <activeProfiles>
