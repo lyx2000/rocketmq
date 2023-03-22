@@ -24,9 +24,9 @@
                     </snapshots>
                 </repository>
                 <repository>
-                    <id>serverless-100005712758-hellocorp-rocketmq</id>
-                    <name>rocketmq</name>
-                    <url>https://serverless-100005712758-maven.pkg.coding.net/repository/hellocorp/rocketmq/</url>
+                    <id>serverless-100005712758-hellocorp-maven</id>
+                    <name>maven</name>
+                    <url>https://serverless-100005712758-maven.pkg.coding.net/repository/hellocorp/maven/</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
@@ -40,5 +40,4 @@
     <activeProfiles>
         <activeProfile>Repository Proxy</activeProfile>
     </activeProfiles>
-
 </settings>
