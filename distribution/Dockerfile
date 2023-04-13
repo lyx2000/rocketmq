@@ -18,4 +18,6 @@ RUN export JAVA_OPT=" -Duser.home=/opt"
 # Add ${JAVA_HOME}/lib/ext as java.ext.dirs
 RUN sed -i 's/${JAVA_HOME}\/jre\/lib\/ext/${JAVA_HOME}\/jre\/lib\/ext:${JAVA_HOME}\/lib\/ext/' ${ROCKETMQ_HOME}/bin/tools.sh
 
+RUN mkdir ${ROCKETMQ_HOME}/conf/acl
+
 WORKDIR ${ROCKETMQ_HOME}/bin
