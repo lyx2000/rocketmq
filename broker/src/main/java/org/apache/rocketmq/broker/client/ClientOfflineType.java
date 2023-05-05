@@ -16,13 +16,8 @@
  */
 package org.apache.rocketmq.broker.client;
 
-/**
- * producer manager will call this listener when something happen
- * <p>
- * event type: {@link ProducerGroupEvent}
- */
-public interface ProducerChangeListener {
-
-    void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo,
-        ClientOfflineType offlineType);
+public enum ClientOfflineType {
+    CHANNEL_CLOSE,
+    UNREGISTER,
+    SCAN_NOT_ACTIVE
 }

@@ -21,11 +21,13 @@ import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -59,6 +61,7 @@ public class TopicConfigManager extends ConfigManager {
     private ConcurrentMap<String, TopicConfig> topicConfigTable = new ConcurrentHashMap<>(1024);
     private DataVersion dataVersion = new DataVersion();
     private transient BrokerController brokerController;
+    private final List<TopicChangeListener> topicChangeListenerList = new CopyOnWriteArrayList<>();
 
     public TopicConfigManager() {
     }
@@ -474,10 +477,13 @@ public class TopicConfigManager extends ConfigManager {
         topicConfig.setAttributes(finalAttributes);
 
         TopicConfig old = this.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
+
         if (old != null) {
             log.info("update topic config, old:[{}] new:[{}]", old, topicConfig);
+            callTopicChangeListener(TopicEvent.TOPIC_UPDATE, topicConfig);
         } else {
             log.info("create new topic [{}]", topicConfig);
+            callTopicChangeListener(TopicEvent.TOPIC_CREATE, topicConfig);
         }
 
         long stateMachineVersion = brokerController.getMessageStore() != null ? brokerController.getMessageStore().getStateMachineVersion() : 0;
@@ -541,6 +547,7 @@ public class TopicConfigManager extends ConfigManager {
     public void deleteTopicConfig(final String topic) {
         TopicConfig old = this.topicConfigTable.remove(topic);
         if (old != null) {
+            callTopicChangeListener(TopicEvent.TOPIC_DELETE, old);
             log.info("delete topic config OK, topic: {}", old);
             long stateMachineVersion = brokerController.getMessageStore() != null ? brokerController.getMessageStore().getStateMachineVersion() : 0;
             dataVersion.nextVersion(stateMachineVersion);
@@ -730,6 +737,20 @@ public class TopicConfigManager extends ConfigManager {
 
     public boolean containsTopic(String topic) {
         return topicConfigTable.containsKey(topic);
+    }
+
+    public void appendTopicChangeListener(TopicChangeListener listener) {
+        topicChangeListenerList.add(listener);
+    }
+
+    protected void callTopicChangeListener(TopicEvent topicEvent, TopicConfig topicConfig) {
+        for (TopicChangeListener listener : topicChangeListenerList) {
+            try {
+                listener.handle(topicEvent, topicConfig);
+            } catch (Throwable t) {
+                log.error("err when call topicChangeListener", t);
+            }
+        }
     }
 
 

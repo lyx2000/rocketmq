@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 import org.apache.rocketmq.acl.AccessValidator;
 import org.apache.rocketmq.acl.plain.PlainAccessValidator;
 import org.apache.rocketmq.broker.client.ClientHousekeepingService;
+import org.apache.rocketmq.broker.client.ConsumerGroupInfo;
 import org.apache.rocketmq.broker.client.ConsumerIdsChangeListener;
 import org.apache.rocketmq.broker.client.ConsumerManager;
 import org.apache.rocketmq.broker.client.DefaultConsumerIdsChangeListener;
@@ -52,6 +54,14 @@ import org.apache.rocketmq.broker.client.net.Broker2Client;
 import org.apache.rocketmq.broker.client.rebalance.RebalanceLockManager;
 import org.apache.rocketmq.broker.controller.ReplicasManager;
 import org.apache.rocketmq.broker.dledger.DLedgerRoleChangeHandler;
+import org.apache.rocketmq.broker.eventtrack.EventTrackerUtil;
+import org.apache.rocketmq.broker.eventtrack.EventTrackerManager;
+import org.apache.rocketmq.broker.eventtrack.EventType;
+import org.apache.rocketmq.broker.eventtrack.listener.ConsumerEventTrackListener;
+import org.apache.rocketmq.broker.eventtrack.listener.GroupConfigEventTrackListener;
+import org.apache.rocketmq.broker.eventtrack.listener.ProducerEventTrackListener;
+import org.apache.rocketmq.broker.eventtrack.listener.SubscriptionEventTrackListener;
+import org.apache.rocketmq.broker.eventtrack.listener.TopicEventTrackListener;
 import org.apache.rocketmq.broker.failover.EscapeBridge;
 import org.apache.rocketmq.broker.filter.CommitLogDispatcherCalcBitMap;
 import org.apache.rocketmq.broker.filter.ConsumerFilterManager;
@@ -156,6 +166,8 @@ import org.apache.rocketmq.store.stats.LmqBrokerStatsManager;
 import org.apache.rocketmq.store.timer.TimerCheckpoint;
 import org.apache.rocketmq.store.timer.TimerMessageStore;
 import org.apache.rocketmq.store.timer.TimerMetrics;
+
+import static org.apache.rocketmq.broker.metrics.BrokerMetricsConstant.NODE_TYPE_BROKER;
 
 public class BrokerController {
     protected static final Logger LOG = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
@@ -394,6 +406,32 @@ public class BrokerController {
 
         if (this.brokerConfig.isEnableSlaveActingMaster() && !this.brokerConfig.isSkipPreOnline()) {
             this.brokerPreOnlineService = new BrokerPreOnlineService(this);
+        }
+
+        if (this.brokerConfig.isEnableEventTrack()) {
+            EventTrackerManager.initEventContext(brokerConfig.getBrokerName(), NODE_TYPE_BROKER);
+            Set<EventType> enableEventTypeSet = EventTrackerUtil.decodeEventList(this.brokerConfig.getEnabledTrackerList());
+            if (EventTrackerUtil.checkEvent(EventType.CONSUMER_GROUP_CLIENT_EVENT, enableEventTypeSet)) {
+                consumerManager.appendConsumerIdsChangeListener(new ConsumerEventTrackListener());
+            }
+            if (EventTrackerUtil.checkEvent(EventType.CONSUMER_GROUP_EVENT, enableEventTypeSet)) {
+                subscriptionGroupManager.appendConsumerGroupChangeListener(new GroupConfigEventTrackListener());
+            }
+            if (EventTrackerUtil.checkEvent(EventType.PRODUCER_CLIENT_EVENT, enableEventTypeSet)) {
+                producerManager.appendProducerChangeListener(new ProducerEventTrackListener());
+            }
+            if (EventTrackerUtil.checkEvent(EventType.SUBSCRIPTION_EVENT, enableEventTypeSet)) {
+                ConsumerGroupInfo.appendSubscriptionChangeListener(new SubscriptionEventTrackListener());
+            }
+            if (EventTrackerUtil.checkEvent(EventType.TOPIC_EVENT, enableEventTypeSet)) {
+                topicConfigManager.appendTopicChangeListener(new TopicEventTrackListener());
+            }
+            if (EventTrackerUtil.checkEvent(EventType.STARTUP_EVENT, enableEventTypeSet)) {
+                EventTrackerManager.trackEvent(EventType.STARTUP_EVENT);
+            }
+            if (EventTrackerUtil.checkEvent(EventType.SHUTDOWN_EVENT, enableEventTypeSet)) {
+                this.setShutdownHook(controller -> EventTrackerManager.trackEvent(EventType.SHUTDOWN_EVENT));
+            }
         }
     }
 
@@ -906,16 +944,16 @@ public class BrokerController {
         this.transactionalMessageService = ServiceProvider.loadClass(TransactionalMessageService.class);
         if (null == this.transactionalMessageService) {
             this.transactionalMessageService = new TransactionalMessageServiceImpl(
-                    new TransactionalMessageBridge(this, this.getMessageStore()));
+                new TransactionalMessageBridge(this, this.getMessageStore()));
             LOG.warn("Load default transaction message hook service: {}",
-                    TransactionalMessageServiceImpl.class.getSimpleName());
+                TransactionalMessageServiceImpl.class.getSimpleName());
         }
         this.transactionalMessageCheckListener = ServiceProvider.loadClass(
-                AbstractTransactionalMessageCheckListener.class);
+            AbstractTransactionalMessageCheckListener.class);
         if (null == this.transactionalMessageCheckListener) {
             this.transactionalMessageCheckListener = new DefaultTransactionalMessageCheckListener();
             LOG.warn("Load default discard message hook service: {}",
-                    DefaultTransactionalMessageCheckListener.class.getSimpleName());
+                DefaultTransactionalMessageCheckListener.class.getSimpleName());
         }
         this.transactionalMessageCheckListener.setBrokerController(this);
         this.transactionalMessageCheckService = new TransactionalMessageCheckService(this);

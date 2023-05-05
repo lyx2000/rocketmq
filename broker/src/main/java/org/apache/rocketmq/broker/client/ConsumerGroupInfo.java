@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
@@ -34,6 +35,7 @@ import org.apache.rocketmq.remoting.protocol.heartbeat.SubscriptionData;
 
 public class ConsumerGroupInfo {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final List<SubscriptionChangeListener> SUBSCRIPTION_CHANGE_LISTENERS = new CopyOnWriteArrayList<>();
     private final String groupName;
     private final ConcurrentMap<String/* Topic */, SubscriptionData> subscriptionTable =
         new ConcurrentHashMap<>();
@@ -125,9 +127,9 @@ public class ConsumerGroupInfo {
     /**
      * Update {@link #channelInfoTable} in {@link ConsumerGroupInfo}
      *
-     * @param infoNew Channel info of new client.
-     * @param consumeType consume type of new client.
-     * @param messageModel message consuming model (CLUSTERING/BROADCASTING) of new client.
+     * @param infoNew          Channel info of new client.
+     * @param consumeType      consume type of new client.
+     * @param messageModel     message consuming model (CLUSTERING/BROADCASTING) of new client.
      * @param consumeFromWhere indicate the position when the client consume message firstly.
      * @return the result that if new connector is connected or not.
      */
@@ -179,11 +181,16 @@ public class ConsumerGroupInfo {
                 SubscriptionData prev = this.subscriptionTable.putIfAbsent(sub.getTopic(), sub);
                 if (null == prev) {
                     updated = true;
+                    callSubscriptionChangeListener(this.groupName, SubscriptionEvent.SUBSCRIPTION_CREATE, null, sub);
                     log.info("subscription changed, add new topic, group: {} {}",
                         this.groupName,
                         sub.toString());
                 }
             } else if (sub.getSubVersion() > old.getSubVersion()) {
+                // if update track event
+                if (!sub.isSame(old)) {
+                    callSubscriptionChangeListener(this.groupName, SubscriptionEvent.SUBSCRIPTION_UPDATE, old, sub);
+                }
                 if (this.consumeType == ConsumeType.CONSUME_PASSIVELY) {
                     log.info("subscription changed, group: {} OLD: {} NEW: {}",
                         this.groupName,
@@ -215,7 +222,7 @@ public class ConsumerGroupInfo {
                     oldTopic,
                     next.getValue().toString()
                 );
-
+                callSubscriptionChangeListener(this.groupName, SubscriptionEvent.SUBSCRIPTION_REMOVE, next.getValue(), null);
                 it.remove();
                 updated = true;
             }
@@ -268,5 +275,20 @@ public class ConsumerGroupInfo {
 
     public void setConsumeFromWhere(ConsumeFromWhere consumeFromWhere) {
         this.consumeFromWhere = consumeFromWhere;
+    }
+
+    public static void appendSubscriptionChangeListener(SubscriptionChangeListener listener) {
+        SUBSCRIPTION_CHANGE_LISTENERS.add(listener);
+    }
+
+    protected static void callSubscriptionChangeListener(String groupName,
+        SubscriptionEvent type, SubscriptionData originSubscription, SubscriptionData newSubscription) {
+        for (SubscriptionChangeListener listener : SUBSCRIPTION_CHANGE_LISTENERS) {
+            try {
+                listener.handle(groupName, type, originSubscription, newSubscription);
+            } catch (Throwable t) {
+                log.error("err when call subscriptionChangeListener", t);
+            }
+        }
     }
 }

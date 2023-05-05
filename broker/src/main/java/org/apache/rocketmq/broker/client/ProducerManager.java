@@ -116,7 +116,7 @@ public class ProducerManager {
                     log.warn(
                             "ProducerManager#scanNotActiveChannel: remove expired channel[{}] from ProducerManager groupChannelTable, producer group name: {}",
                             RemotingHelper.parseChannelRemoteAddr(info.getChannel()), group);
-                    callProducerChangeListener(ProducerGroupEvent.CLIENT_UNREGISTER, group, info);
+                    callProducerChangeListener(ProducerGroupEvent.CLIENT_UNREGISTER, group, info, ClientOfflineType.SCAN_NOT_ACTIVE);
                     RemotingHelper.closeChannel(info.getChannel());
                 }
             }
@@ -124,7 +124,7 @@ public class ProducerManager {
             if (chlMap.isEmpty()) {
                 log.warn("SCAN: remove expired channel from ProducerManager groupChannelTable, all clear, group={}", group);
                 iterator.remove();
-                callProducerChangeListener(ProducerGroupEvent.GROUP_UNREGISTER, group, null);
+                callProducerChangeListener(ProducerGroupEvent.GROUP_UNREGISTER, group, null, null);
             }
         }
     }
@@ -145,12 +145,12 @@ public class ProducerManager {
                     log.info(
                             "NETTY EVENT: remove channel[{}][{}] from ProducerManager groupChannelTable, producer group: {}",
                             clientChannelInfo.toString(), remoteAddr, group);
-                    callProducerChangeListener(ProducerGroupEvent.CLIENT_UNREGISTER, group, clientChannelInfo);
+                    callProducerChangeListener(ProducerGroupEvent.CLIENT_UNREGISTER, group, clientChannelInfo, ClientOfflineType.CHANNEL_CLOSE);
                     if (clientChannelInfoTable.isEmpty()) {
                         ConcurrentHashMap<Channel, ClientChannelInfo> oldGroupTable = this.groupChannelTable.remove(group);
                         if (oldGroupTable != null) {
                             log.info("unregister a producer group[{}] from groupChannelTable", group);
-                            callProducerChangeListener(ProducerGroupEvent.GROUP_UNREGISTER, group, null);
+                            callProducerChangeListener(ProducerGroupEvent.GROUP_UNREGISTER, group, null, null);
                         }
                     }
                 }
@@ -175,6 +175,7 @@ public class ProducerManager {
             clientChannelTable.put(clientChannelInfo.getClientId(), clientChannelInfo.getChannel());
             log.info("new producer connected, group: {} channel: {}", group,
                     clientChannelInfo.toString());
+            callProducerChangeListener(ProducerGroupEvent.CLIENT_REGISTER, group, clientChannelInfo, null);
         }
 
 
@@ -191,12 +192,12 @@ public class ProducerManager {
             if (old != null) {
                 log.info("unregister a producer[{}] from groupChannelTable {}", group,
                         clientChannelInfo.toString());
-                callProducerChangeListener(ProducerGroupEvent.CLIENT_UNREGISTER, group, clientChannelInfo);
+                callProducerChangeListener(ProducerGroupEvent.CLIENT_UNREGISTER, group, clientChannelInfo, ClientOfflineType.UNREGISTER);
             }
 
             if (channelTable.isEmpty()) {
                 this.groupChannelTable.remove(group);
-                callProducerChangeListener(ProducerGroupEvent.GROUP_UNREGISTER, group, null);
+                callProducerChangeListener(ProducerGroupEvent.GROUP_UNREGISTER, group, null, null);
                 log.info("unregister a producer group[{}] from groupChannelTable", group);
             }
         }
@@ -247,10 +248,10 @@ public class ProducerManager {
     }
 
     private void callProducerChangeListener(ProducerGroupEvent event, String group,
-        ClientChannelInfo clientChannelInfo) {
+        ClientChannelInfo clientChannelInfo, ClientOfflineType offlineType) {
         for (ProducerChangeListener listener : producerChangeListenerList) {
             try {
-                listener.handle(event, group, clientChannelInfo);
+                listener.handle(event, group, clientChannelInfo, offlineType);
             } catch (Throwable t) {
                 log.error("err when call producerChangeListener", t);
             }

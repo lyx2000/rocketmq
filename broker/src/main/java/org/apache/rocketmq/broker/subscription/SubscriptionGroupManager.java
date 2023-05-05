@@ -17,9 +17,11 @@
 package org.apache.rocketmq.broker.subscription;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.BrokerPathConfigHelper;
@@ -27,10 +29,10 @@ import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.common.ConfigManager;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.common.topic.TopicValidator;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
 import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 import org.apache.rocketmq.remoting.protocol.DataVersion;
-import org.apache.rocketmq.common.topic.TopicValidator;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 import org.apache.rocketmq.remoting.protocol.subscription.SubscriptionGroupConfig;
 
@@ -45,6 +47,8 @@ public class SubscriptionGroupManager extends ConfigManager {
 
     private final DataVersion dataVersion = new DataVersion();
     private transient BrokerController brokerController;
+
+    private final List<SubscriptionGroupConfigChangeListener> subscriptionGroupConfigChangeListenerList = new CopyOnWriteArrayList<>();
 
     public SubscriptionGroupManager() {
         this.init();
@@ -114,8 +118,10 @@ public class SubscriptionGroupManager extends ConfigManager {
         SubscriptionGroupConfig old = this.subscriptionGroupTable.put(config.getGroupName(), config);
         if (old != null) {
             log.info("update subscription group config, old: {} new: {}", old, config);
+            callSubscriptionGroupChangeListener(SubscriptionGroupConfigEvent.GROUP_CONFIG_UPDATE, old);
         } else {
             log.info("create new subscription group, {}", config);
+            callSubscriptionGroupChangeListener(SubscriptionGroupConfigEvent.GROUP_CONFIG_CREATE, config);
         }
 
         long stateMachineVersion = brokerController.getMessageStore() != null ? brokerController.getMessageStore().getStateMachineVersion() : 0;
@@ -292,6 +298,7 @@ public class SubscriptionGroupManager extends ConfigManager {
         SubscriptionGroupConfig old = this.subscriptionGroupTable.remove(groupName);
         this.forbiddenTable.remove(groupName);
         if (old != null) {
+            callSubscriptionGroupChangeListener(SubscriptionGroupConfigEvent.GROUP_CONFIG_DELETE, old);
             log.info("delete subscription group OK, subscription group:{}", old);
             long stateMachineVersion = brokerController.getMessageStore() != null ? brokerController.getMessageStore().getStateMachineVersion() : 0;
             dataVersion.nextVersion(stateMachineVersion);
@@ -315,4 +322,20 @@ public class SubscriptionGroupManager extends ConfigManager {
 
         return subscriptionGroupTable.containsKey(group);
     }
+
+    public void appendConsumerGroupChangeListener(SubscriptionGroupConfigChangeListener listener) {
+        subscriptionGroupConfigChangeListenerList.add(listener);
+    }
+
+    protected void callSubscriptionGroupChangeListener(SubscriptionGroupConfigEvent event,
+        SubscriptionGroupConfig config) {
+        for (SubscriptionGroupConfigChangeListener listener : subscriptionGroupConfigChangeListenerList) {
+            try {
+                listener.handle(event, config);
+            } catch (Throwable t) {
+                log.error("err when call subscriptionGroupChangeListener", t);
+            }
+        }
+    }
+
 }

@@ -45,6 +45,7 @@ public class SubscriptionGroupConfig {
     private int groupSysFlag = 0;
 
     // Only valid for push consumer
+    //
     private int consumeTimeoutMinute = 15;
 
     private Set<SimpleSubscriptionData> subscriptionDataSet;

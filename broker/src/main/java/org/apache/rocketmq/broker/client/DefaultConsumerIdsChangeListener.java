@@ -37,10 +37,10 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
     private final BrokerController brokerController;
     private final int cacheSize = 8096;
 
-    private final ScheduledExecutorService scheduledExecutorService =  new ScheduledThreadPoolExecutor(1,
+    private final ScheduledExecutorService scheduledExecutorService = new ScheduledThreadPoolExecutor(1,
         ThreadUtils.newGenericThreadFactory("DefaultConsumerIdsChangeListener", true));
 
-    private ConcurrentHashMap<String,List<Channel>> consumerChannelMap = new ConcurrentHashMap<>(cacheSize);
+    private ConcurrentHashMap<String, List<Channel>> consumerChannelMap = new ConcurrentHashMap<>(cacheSize);
 
     public DefaultConsumerIdsChangeListener(BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -89,6 +89,7 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
                 Collection<SubscriptionData> subscriptionDataList = (Collection<SubscriptionData>) args[0];
                 this.brokerController.getConsumerFilterManager().register(group, subscriptionDataList);
                 break;
+            case GROUP_REGISTER:
             case CLIENT_REGISTER:
             case CLIENT_UNREGISTER:
                 break;

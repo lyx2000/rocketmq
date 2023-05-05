@@ -14,15 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.client;
+package org.apache.rocketmq.broker.subscription;
 
-/**
- * producer manager will call this listener when something happen
- * <p>
- * event type: {@link ProducerGroupEvent}
- */
-public interface ProducerChangeListener {
+import org.apache.rocketmq.remoting.protocol.subscription.SubscriptionGroupConfig;
 
-    void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo,
-        ClientOfflineType offlineType);
+public interface SubscriptionGroupConfigChangeListener {
+
+    void handle(SubscriptionGroupConfigEvent event, SubscriptionGroupConfig config);
+
+
 }

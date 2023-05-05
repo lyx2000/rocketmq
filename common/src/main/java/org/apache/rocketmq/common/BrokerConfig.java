@@ -404,6 +404,9 @@ public class BrokerConfig extends BrokerIdentity {
      */
     private boolean estimateAccumulation = true;
 
+    private boolean enableEventTrack = true;
+
+    private String enabledTrackerList;
 
     public long getMaxPopPollingSize() {
         return maxPopPollingSize;
@@ -1659,5 +1662,21 @@ public class BrokerConfig extends BrokerIdentity {
 
     public void setUseStaticSubscription(boolean useStaticSubscription) {
         this.useStaticSubscription = useStaticSubscription;
+    }
+
+    public boolean isEnableEventTrack() {
+        return enableEventTrack;
+    }
+
+    public void setEnableEventTrack(boolean enableEventTrack) {
+        this.enableEventTrack = enableEventTrack;
+    }
+
+    public String getEnabledTrackerList() {
+        return enabledTrackerList;
+    }
+
+    public void setEnabledTrackerList(String enabledTrackerList) {
+        this.enabledTrackerList = enabledTrackerList;
     }
 }

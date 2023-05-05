@@ -528,6 +528,27 @@
         </sift>
     </appender>
 
+    <appender name="RocketmqEventAppender_inner"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${user.home}/logs/rocketmqlogs/event.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/event.broker.%i.log.gz</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>10</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>128MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%m%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="RocketmqEventAppender" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="RocketmqEventAppender_inner"/>
+    </appender>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
@@ -601,6 +622,10 @@
 
     <logger name="io.opentelemetry.exporter.logging.LoggingMetricExporter" additivity="false" level="INFO">
         <appender-ref ref="RocketmqBrokerMetricsAppender"/>
+    </logger>
+
+    <logger name="RocketmqEventLogger" additivity="false" level="INFO">
+        <appender-ref ref="RocketmqEventAppender" />
     </logger>
 
     <root level="INFO">

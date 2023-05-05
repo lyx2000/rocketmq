@@ -76,6 +76,7 @@ public class BrokerStartup {
     public static void shutdown(final BrokerController controller) {
         if (null != controller) {
             controller.shutdown();
+
         }
     }
 

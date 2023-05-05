@@ -43,6 +43,7 @@ import org.apache.rocketmq.broker.client.ConsumerGroupEvent;
 import org.apache.rocketmq.broker.client.ConsumerIdsChangeListener;
 import org.apache.rocketmq.broker.client.ProducerChangeListener;
 import org.apache.rocketmq.broker.client.ProducerGroupEvent;
+import org.apache.rocketmq.broker.client.ClientOfflineType;
 import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.common.attribute.TopicMessageType;
 import org.apache.rocketmq.common.constant.LoggerName;
@@ -472,7 +473,8 @@ public class ClientActivity extends AbstractMessingActivity {
     protected class ProducerChangeListenerImpl implements ProducerChangeListener {
 
         @Override
-        public void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo) {
+        public void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo,
+            ClientOfflineType offlineType) {
             if (event == ProducerGroupEvent.CLIENT_UNREGISTER) {
                 grpcChannelManager.removeChannel(clientChannelInfo.getClientId());
                 grpcClientSettingsManager.removeClientSettings(clientChannelInfo.getClientId());

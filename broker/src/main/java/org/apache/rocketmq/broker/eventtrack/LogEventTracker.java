@@ -14,15 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.client;
+package org.apache.rocketmq.broker.eventtrack;
 
-/**
- * producer manager will call this listener when something happen
- * <p>
- * event type: {@link ProducerGroupEvent}
- */
-public interface ProducerChangeListener {
+import com.alibaba.fastjson.JSON;
+import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.logging.org.slf4j.Logger;
+import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 
-    void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo,
-        ClientOfflineType offlineType);
+public class LogEventTracker implements EventTracker {
+
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.ROCKETMQ_EVENT_LOGGER);
+
+    @Override
+    public void trackEvent(EventContext eventContext) {
+        log.info(JSON.toJSONString(eventContext));
+    }
 }

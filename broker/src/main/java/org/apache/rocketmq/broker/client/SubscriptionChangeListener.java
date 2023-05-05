@@ -16,13 +16,10 @@
  */
 package org.apache.rocketmq.broker.client;
 
-/**
- * producer manager will call this listener when something happen
- * <p>
- * event type: {@link ProducerGroupEvent}
- */
-public interface ProducerChangeListener {
+import org.apache.rocketmq.remoting.protocol.heartbeat.SubscriptionData;
 
-    void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo,
-        ClientOfflineType offlineType);
+public interface SubscriptionChangeListener {
+
+    void handle(String groupName,
+        SubscriptionEvent type, SubscriptionData originSubscription, SubscriptionData newSubscription);
 }

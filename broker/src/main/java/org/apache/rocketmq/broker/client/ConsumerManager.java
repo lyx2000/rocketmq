@@ -136,7 +136,7 @@ public class ConsumerManager {
             ConsumerGroupInfo info = next.getValue();
             ClientChannelInfo clientChannelInfo = info.doChannelCloseEvent(remoteAddr, channel);
             if (clientChannelInfo != null) {
-                callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_UNREGISTER, next.getKey(), clientChannelInfo, info.getSubscribeTopics());
+                callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_UNREGISTER, next.getKey(), clientChannelInfo, info.getSubscribeTopics(), ClientOfflineType.CHANNEL_CLOSE);
                 if (info.getChannelInfoTable().isEmpty()) {
                     ConsumerGroupInfo remove = this.consumerTable.remove(next.getKey());
                     if (remove != null) {
@@ -178,8 +178,7 @@ public class ConsumerManager {
         long start = System.currentTimeMillis();
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (null == consumerGroupInfo) {
-            callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_REGISTER, group, clientChannelInfo,
-                subList.stream().map(SubscriptionData::getTopic).collect(Collectors.toSet()));
+            callConsumerIdsChangeListener(ConsumerGroupEvent.GROUP_REGISTER, group);
             ConsumerGroupInfo tmp = new ConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere);
             ConsumerGroupInfo prev = this.consumerTable.putIfAbsent(group, tmp);
             consumerGroupInfo = prev != null ? prev : tmp;
@@ -188,6 +187,10 @@ public class ConsumerManager {
         boolean r1 =
             consumerGroupInfo.updateChannel(clientChannelInfo, consumeType, messageModel,
                 consumeFromWhere);
+        if (r1) {
+            callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_REGISTER, group, clientChannelInfo,
+                subList.stream().map(SubscriptionData::getTopic).collect(Collectors.toSet()));
+        }
         boolean r2 = false;
         if (updateSubscription) {
             r2 = consumerGroupInfo.updateSubscription(subList);
@@ -201,7 +204,6 @@ public class ConsumerManager {
         if (null != this.brokerStatsManager) {
             this.brokerStatsManager.incConsumerRegisterTime((int) (System.currentTimeMillis() - start));
         }
-
         callConsumerIdsChangeListener(ConsumerGroupEvent.REGISTER, group, subList, clientChannelInfo);
 
         return r1 || r2;
@@ -213,13 +215,12 @@ public class ConsumerManager {
         if (null != consumerGroupInfo) {
             boolean removed = consumerGroupInfo.unregisterChannel(clientChannelInfo);
             if (removed) {
-                callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_UNREGISTER, group, clientChannelInfo, consumerGroupInfo.getSubscribeTopics());
+                callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_UNREGISTER, group, clientChannelInfo, consumerGroupInfo.getSubscribeTopics(), ClientOfflineType.UNREGISTER);
             }
             if (consumerGroupInfo.getChannelInfoTable().isEmpty()) {
                 ConsumerGroupInfo remove = this.consumerTable.remove(group);
                 if (remove != null) {
                     LOGGER.info("unregister consumer ok, no any connection, and remove consumer group, {}", group);
-
                     callConsumerIdsChangeListener(ConsumerGroupEvent.UNREGISTER, group);
                 }
             }
@@ -270,7 +271,7 @@ public class ConsumerManager {
                     LOGGER.warn(
                         "SCAN: remove expired channel from ConsumerManager consumerTable. channel={}, consumerGroup={}",
                         RemotingHelper.parseChannelRemoteAddr(clientChannelInfo.getChannel()), group);
-                    callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_UNREGISTER, group, clientChannelInfo, consumerGroupInfo.getSubscribeTopics());
+                    callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_UNREGISTER, group, clientChannelInfo, consumerGroupInfo.getSubscribeTopics(), ClientOfflineType.SCAN_NOT_ACTIVE);
                     RemotingHelper.closeChannel(clientChannelInfo.getChannel());
                     itChannel.remove();
                 }
@@ -281,6 +282,7 @@ public class ConsumerManager {
                     "SCAN: remove expired channel from ConsumerManager consumerTable, all clear, consumerGroup={}",
                     group);
                 it.remove();
+                callConsumerIdsChangeListener(ConsumerGroupEvent.UNREGISTER, group);
             }
         }
         removeExpireConsumerGroupInfo();

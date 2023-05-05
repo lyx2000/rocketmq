@@ -14,15 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.client;
+package org.apache.rocketmq.broker.eventtrack;
 
-/**
- * producer manager will call this listener when something happen
- * <p>
- * event type: {@link ProducerGroupEvent}
- */
-public interface ProducerChangeListener {
+public enum EventType {
 
-    void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo,
-        ClientOfflineType offlineType);
+    CONSUMER_GROUP_EVENT,
+
+    CONSUMER_GROUP_CLIENT_EVENT,
+
+    SUBSCRIPTION_EVENT,
+
+    PRODUCER_CLIENT_EVENT,
+
+    TOPIC_EVENT,
+
+    STARTUP_EVENT,
+
+    SHUTDOWN_EVENT
+
 }

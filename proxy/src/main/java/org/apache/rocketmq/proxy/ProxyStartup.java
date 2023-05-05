@@ -22,6 +22,7 @@ import io.grpc.protobuf.services.ChannelzService;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.cli.CommandLine;
@@ -31,6 +32,13 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.BrokerStartup;
+import org.apache.rocketmq.broker.client.ConsumerGroupInfo;
+import org.apache.rocketmq.broker.eventtrack.EventTrackerManager;
+import org.apache.rocketmq.broker.eventtrack.EventTrackerUtil;
+import org.apache.rocketmq.broker.eventtrack.EventType;
+import org.apache.rocketmq.broker.eventtrack.listener.ConsumerEventTrackListener;
+import org.apache.rocketmq.broker.eventtrack.listener.ProducerEventTrackListener;
+import org.apache.rocketmq.broker.eventtrack.listener.SubscriptionEventTrackListener;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.thread.ThreadPoolMonitor;
@@ -51,11 +59,18 @@ import org.apache.rocketmq.proxy.remoting.RemotingProtocolServer;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.srvutil.ServerUtil;
 
+import static org.apache.rocketmq.proxy.metrics.ProxyMetricsConstant.NODE_TYPE_PROXY;
+
 public class ProxyStartup {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.PROXY_LOGGER_NAME);
     private static final ProxyStartAndShutdown PROXY_START_AND_SHUTDOWN = new ProxyStartAndShutdown();
 
     private static class ProxyStartAndShutdown extends AbstractStartAndShutdown {
+        @Override
+        public void shutdown() throws Exception {
+            super.shutdown();
+        }
+
         @Override
         public void appendStartAndShutdown(StartAndShutdown startAndShutdown) {
             super.appendStartAndShutdown(startAndShutdown);
@@ -170,6 +185,36 @@ public class ProxyStartup {
             messagingProcessor = DefaultMessagingProcessor.createForClusterMode();
             ProxyMetricsManager proxyMetricsManager = ProxyMetricsManager.initClusterMode(ConfigurationManager.getProxyConfig());
             PROXY_START_AND_SHUTDOWN.appendStartAndShutdown(proxyMetricsManager);
+
+            if (ConfigurationManager.getProxyConfig().isEnableEventTrack()) {
+                EventTrackerManager.initEventContext(ConfigurationManager.getProxyConfig().getProxyName(), NODE_TYPE_PROXY);
+                Set<EventType> enableEventTypeSet = EventTrackerUtil.decodeEventList(ConfigurationManager.getProxyConfig().getEnabledTrackerList());
+                if (EventTrackerUtil.checkEvent(EventType.CONSUMER_GROUP_CLIENT_EVENT, enableEventTypeSet)) {
+                    messagingProcessor.registerConsumerListener(new ConsumerEventTrackListener());
+                }
+                if (EventTrackerUtil.checkEvent(EventType.PRODUCER_CLIENT_EVENT, enableEventTypeSet)) {
+                    messagingProcessor.registerProducerListener(new ProducerEventTrackListener());
+                }
+                if (EventTrackerUtil.checkEvent(EventType.SUBSCRIPTION_EVENT, enableEventTypeSet)) {
+                    ConsumerGroupInfo.appendSubscriptionChangeListener(new SubscriptionEventTrackListener());
+                }
+                PROXY_START_AND_SHUTDOWN.appendStartAndShutdown(new StartAndShutdown() {
+                    @Override
+                    public void shutdown() {
+                        if (EventTrackerUtil.checkEvent(EventType.SHUTDOWN_EVENT, enableEventTypeSet)) {
+                            EventTrackerManager.trackEvent(EventType.SHUTDOWN_EVENT);
+                        }
+                    }
+
+                    @Override
+                    public void start() {
+                        if (EventTrackerUtil.checkEvent(EventType.STARTUP_EVENT, enableEventTypeSet)) {
+                            EventTrackerManager.trackEvent(EventType.STARTUP_EVENT);
+                        }
+                    }
+                });
+            }
+
         } else if (ProxyMode.isLocalMode(proxyModeStr)) {
             BrokerController brokerController = createBrokerController();
             ProxyMetricsManager.initLocalMode(brokerController.getBrokerMetricsManager(), ConfigurationManager.getProxyConfig());

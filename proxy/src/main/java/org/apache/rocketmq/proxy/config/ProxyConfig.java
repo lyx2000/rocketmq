@@ -250,6 +250,10 @@ public class ProxyConfig implements ConfigFile {
     private long remotingWaitTimeMillsInTopicRouteQueue = 3 * 1000;
     private long remotingWaitTimeMillsInDefaultQueue = 3 * 1000;
 
+    private boolean enableEventTrack = true;
+
+    private String enabledTrackerList;
+
     @Override
     public void initData() {
         parseDelayLevel();
@@ -1378,5 +1382,21 @@ public class ProxyConfig implements ConfigFile {
 
     public void setRemotingWaitTimeMillsInDefaultQueue(long remotingWaitTimeMillsInDefaultQueue) {
         this.remotingWaitTimeMillsInDefaultQueue = remotingWaitTimeMillsInDefaultQueue;
+    }
+
+    public boolean isEnableEventTrack() {
+        return enableEventTrack;
+    }
+
+    public void setEnableEventTrack(boolean enableEventTrack) {
+        this.enableEventTrack = enableEventTrack;
+    }
+
+    public String getEnabledTrackerList() {
+        return enabledTrackerList;
+    }
+
+    public void setEnabledTrackerList(String enabledTrackerList) {
+        this.enabledTrackerList = enabledTrackerList;
     }
 }

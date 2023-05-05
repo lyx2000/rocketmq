@@ -24,5 +24,9 @@ public enum ProducerGroupEvent {
     /**
      * The client of this producer is unregistered.
      */
-    CLIENT_UNREGISTER
+    CLIENT_UNREGISTER,
+    /**
+     * The client of this producer is unregistered.
+     */
+    CLIENT_REGISTER
 }

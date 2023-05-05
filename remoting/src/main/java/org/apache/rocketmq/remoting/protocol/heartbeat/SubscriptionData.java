@@ -21,6 +21,7 @@
 package org.apache.rocketmq.remoting.protocol.heartbeat;
 
 import com.alibaba.fastjson.annotation.JSONField;
+import com.google.common.base.Objects;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.rocketmq.common.filter.ExpressionType;
@@ -110,6 +111,20 @@ public class SubscriptionData implements Comparable<SubscriptionData> {
 
     public void setExpressionType(String expressionType) {
         this.expressionType = expressionType;
+    }
+
+    public boolean isSame(SubscriptionData other) {
+        if (this == other)
+            return true;
+        if (other == null)
+            return false;
+        if (!Objects.equal(topic, other.topic))
+            return false;
+        if (!Objects.equal(expressionType, other.expressionType))
+            return false;
+        if (!Objects.equal(subString, other.subString))
+            return false;
+        return true;
     }
 
     @Override

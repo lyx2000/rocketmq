@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.broker.client.ClientChannelInfo;
+import org.apache.rocketmq.broker.client.ClientOfflineType;
 import org.apache.rocketmq.broker.client.ConsumerGroupEvent;
 import org.apache.rocketmq.broker.client.ConsumerIdsChangeListener;
 import org.apache.rocketmq.broker.client.ConsumerManager;
@@ -183,7 +184,8 @@ public class ClusterServiceManager extends AbstractStartAndShutdown implements S
 
     protected class ProducerChangeListenerImpl implements ProducerChangeListener {
         @Override
-        public void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo) {
+        public void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo,
+            ClientOfflineType offlineType) {
             if (event == ProducerGroupEvent.GROUP_UNREGISTER) {
                 getTransactionService().unSubscribeAllTransactionTopic(group);
             }

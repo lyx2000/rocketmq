@@ -53,7 +53,7 @@ public class ProducerManagerTest {
         producerManager.registerProducer(group, clientInfo);
         AtomicReference<String> groupRef = new AtomicReference<>();
         AtomicReference<ClientChannelInfo> clientChannelInfoRef = new AtomicReference<>();
-        producerManager.appendProducerChangeListener((event, group, clientChannelInfo) -> {
+        producerManager.appendProducerChangeListener((event, group, clientChannelInfo, offlineType) -> {
             switch (event) {
                 case GROUP_UNREGISTER:
                     groupRef.set(group);
@@ -84,7 +84,7 @@ public class ProducerManagerTest {
         producerManager.registerProducer(group, clientInfo);
         AtomicReference<String> groupRef = new AtomicReference<>();
         AtomicReference<ClientChannelInfo> clientChannelInfoRef = new AtomicReference<>();
-        producerManager.appendProducerChangeListener((event, group, clientChannelInfo) -> {
+        producerManager.appendProducerChangeListener((event, group, clientChannelInfo, offlineType) -> {
             switch (event) {
                 case GROUP_UNREGISTER:
                     groupRef.set(group);
@@ -121,7 +121,7 @@ public class ProducerManagerTest {
         producerManager.registerProducer(group, clientInfo);
         AtomicReference<String> groupRef = new AtomicReference<>();
         AtomicReference<ClientChannelInfo> clientChannelInfoRef = new AtomicReference<>();
-        producerManager.appendProducerChangeListener((event, group, clientChannelInfo) -> {
+        producerManager.appendProducerChangeListener((event, group, clientChannelInfo, offlineType) -> {
             switch (event) {
                 case GROUP_UNREGISTER:
                     groupRef.set(group);

@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.rocketmq.broker.client.ClientChannelInfo;
 import org.apache.rocketmq.broker.client.ConsumerGroupEvent;
 import org.apache.rocketmq.broker.client.ConsumerIdsChangeListener;
+import org.apache.rocketmq.broker.client.ClientOfflineType;
 import org.apache.rocketmq.client.consumer.AckResult;
 import org.apache.rocketmq.client.consumer.AckStatus;
 import org.apache.rocketmq.client.exception.MQClientException;
@@ -411,7 +412,7 @@ public class ReceiptHandleProcessorTest extends BaseProcessorTest {
         Mockito.verify(messagingProcessor, Mockito.times(1)).registerConsumerListener(listenerArgumentCaptor.capture());
         Channel channel = PROXY_CONTEXT.getVal(ContextVariable.CHANNEL);
         receiptHandleProcessor.addReceiptHandle(channel, GROUP, MSG_ID, receiptHandle, messageReceiptHandle);
-        listenerArgumentCaptor.getValue().handle(ConsumerGroupEvent.CLIENT_UNREGISTER, GROUP, new ClientChannelInfo(channel, "", LanguageCode.JAVA, 0));
+        listenerArgumentCaptor.getValue().handle(ConsumerGroupEvent.CLIENT_UNREGISTER, GROUP, new ClientChannelInfo(channel, "", LanguageCode.JAVA, 0), ClientOfflineType.UNREGISTER);
         assertTrue(receiptHandleProcessor.receiptHandleGroupMap.isEmpty());
     }
 

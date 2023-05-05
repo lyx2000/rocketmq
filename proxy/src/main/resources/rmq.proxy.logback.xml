@@ -343,6 +343,27 @@
         </encoder>
     </appender>
 
+    <appender name="RocketmqEventAppender_inner"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${user.home}/logs/rocketmqlogs/event.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/event.proxy.%i.log.gz</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>10</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>128MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%m%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="RocketmqEventAppender" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="RocketmqEventAppender_inner"/>
+    </appender>
+
     <appender name="RocketmqPopAppender" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="RocketmqPopAppender_inner"/>
     </appender>
@@ -420,6 +441,10 @@
 
     <logger name="io.opentelemetry.exporter.logging.LoggingMetricExporter" additivity="false" level="INFO">
         <appender-ref ref="RocketmqProxyMetricsAppender" />
+    </logger>
+
+    <logger name="RocketmqEventLogger" additivity="false" level="INFO">
+        <appender-ref ref="RocketmqEventAppender" />
     </logger>
 
     <root level="INFO">

@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import java.util.Set;
 import org.apache.rocketmq.broker.client.ClientChannelInfo;
+import org.apache.rocketmq.broker.client.ClientOfflineType;
 import org.apache.rocketmq.broker.client.ConsumerGroupEvent;
 import org.apache.rocketmq.broker.client.ConsumerIdsChangeListener;
 import org.apache.rocketmq.broker.client.ProducerChangeListener;
@@ -185,7 +186,8 @@ public class ClientManagerActivity extends AbstractRemotingActivity {
     protected class ProducerChangeListenerImpl implements ProducerChangeListener {
 
         @Override
-        public void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo) {
+        public void handle(ProducerGroupEvent event, String group, ClientChannelInfo clientChannelInfo,
+            ClientOfflineType offlineType) {
             if (event == ProducerGroupEvent.CLIENT_UNREGISTER) {
                 remotingChannelManager.removeProducerChannel(group, clientChannelInfo.getChannel());
             }
