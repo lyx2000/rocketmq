@@ -98,10 +98,10 @@ choose_gc_options()
     fi
 }
 
-choose_gc_log_directory
+#choose_gc_log_directory
 
-JAVA_OPT="${JAVA_OPT} -server -Xms8g -Xmx8g"
-choose_gc_options
+JAVA_OPT="${JAVA_OPT} -server"
+#choose_gc_options
 JAVA_OPT="${JAVA_OPT} -XX:-OmitStackTraceInFastThrow"
 JAVA_OPT="${JAVA_OPT} -XX:+AlwaysPreTouch"
 JAVA_OPT="${JAVA_OPT} -XX:MaxDirectMemorySize=15g"

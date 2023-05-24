@@ -97,8 +97,8 @@ choose_gc_options()
     fi
 }
 
-choose_gc_log_directory
-choose_gc_options
+#choose_gc_log_directory
+#choose_gc_options
 JAVA_OPT="${JAVA_OPT} -XX:-OmitStackTraceInFastThrow"
 JAVA_OPT="${JAVA_OPT} -XX:-UseLargePages"
 #JAVA_OPT="${JAVA_OPT} -Xdebug -Xrunjdwp:transport=dt_socket,address=9555,server=y,suspend=n"
