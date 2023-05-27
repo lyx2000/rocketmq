@@ -4,7 +4,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl unzip procps vim inetutils-ping && apt-get clean
 
 ENV ROCKETMQ_VERSION 5.1.1-SNAPSHOT
-ENV ROCKETMQ_HOME  /home/rocketmq/rocketmq-${ROCKETMQ_VERSION}
+ENV ROCKETMQ_HOME  /root/rocketmq/rocketmq-${ROCKETMQ_VERSION}
 
 WORKDIR  ${ROCKETMQ_HOME}
 
@@ -19,5 +19,6 @@ RUN export JAVA_OPT=" -Duser.home=/opt"
 RUN sed -i 's/${JAVA_HOME}\/jre\/lib\/ext/${JAVA_HOME}\/jre\/lib\/ext:${JAVA_HOME}\/lib\/ext/' ${ROCKETMQ_HOME}/bin/tools.sh
 
 RUN mkdir ${ROCKETMQ_HOME}/conf/acl
+RUN mkdir "/root/logs"
 
 WORKDIR ${ROCKETMQ_HOME}/bin
