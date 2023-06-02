@@ -46,6 +46,7 @@ import org.apache.rocketmq.broker.client.ConsumerGroupInfo;
 import org.apache.rocketmq.broker.controller.ReplicasManager;
 import org.apache.rocketmq.broker.filter.ConsumerFilterData;
 import org.apache.rocketmq.broker.filter.ExpressionMessageFilter;
+import org.apache.rocketmq.broker.metrics.ConsumerLagCalculator;
 import org.apache.rocketmq.broker.plugin.BrokerAttachedPlugin;
 import org.apache.rocketmq.broker.subscription.SubscriptionGroupManager;
 import org.apache.rocketmq.broker.transaction.queue.TransactionalMessageUtil;
@@ -54,6 +55,7 @@ import org.apache.rocketmq.common.BrokerConfig;
 import org.apache.rocketmq.common.LockCallback;
 import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.Pair;
 import org.apache.rocketmq.common.PlainAccessConfig;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.UnlockCallback;
@@ -161,6 +163,7 @@ import org.apache.rocketmq.remoting.protocol.header.SearchOffsetResponseHeader;
 import org.apache.rocketmq.remoting.protocol.header.UpdateGlobalWhiteAddrsConfigRequestHeader;
 import org.apache.rocketmq.remoting.protocol.header.UpdateGroupForbiddenRequestHeader;
 import org.apache.rocketmq.remoting.protocol.header.ViewBrokerStatsDataRequestHeader;
+import org.apache.rocketmq.remoting.protocol.heartbeat.ConsumeType;
 import org.apache.rocketmq.remoting.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.remoting.protocol.statictopic.LogicQueueMappingItem;
 import org.apache.rocketmq.remoting.protocol.statictopic.TopicConfigAndQueueMapping;
@@ -192,9 +195,11 @@ import static org.apache.rocketmq.remoting.protocol.RemotingCommand.buildErrorRe
 public class AdminBrokerProcessor implements NettyRequestProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     protected final BrokerController brokerController;
+    private final ConsumerLagCalculator consumerLagCalculator;
 
     public AdminBrokerProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
+        consumerLagCalculator = new ConsumerLagCalculator(brokerController);
     }
 
     @Override
@@ -1500,6 +1505,14 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
             topics.add(requestHeader.getTopic());
         }
 
+        String group = requestHeader.getConsumerGroup();
+        ConsumerGroupInfo consumerGroupInfo = brokerController.getConsumerManager()
+            .getConsumerGroupInfo(group, true);
+        boolean isPop = false;
+        if (consumerGroupInfo != null) {
+            isPop = consumerGroupInfo.getConsumeType() == ConsumeType.CONSUME_POP;
+        }
+
         for (String topic : topics) {
             TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topic);
             if (null == topicConfig) {
@@ -1549,10 +1562,27 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
 
                 long pullOffset = this.brokerController.getConsumerOffsetManager().queryPullOffset(
                     requestHeader.getConsumerGroup(), topic, i);
+                if (isPop) {
+                    pullOffset = brokerController.getPopMessageProcessor().getPopBufferMergeService().getLatestOffset(topic, group, i);
+                    if (pullOffset < 0) {
+                        pullOffset = brokerController.getConsumerOffsetManager().queryOffset(group, topic, i);
+                    }
+                    if (pullOffset < 0) {
+                        pullOffset = brokerController.getMessageStore().getMaxOffsetInQueue(topic, i);
+                    }
+                }
 
                 offsetWrapper.setBrokerOffset(brokerOffset);
                 offsetWrapper.setConsumerOffset(consumerOffset);
                 offsetWrapper.setPullOffset(Math.max(consumerOffset, pullOffset));
+
+                Pair<Long, Long> lagStats = consumerLagCalculator.getConsumerLagStats(requestHeader.getConsumerGroup(), topic, i, isPop);
+                offsetWrapper.setLagEstimatedAccumulation(lagStats.getObject1());
+                offsetWrapper.setEarliestUnconsumedTimestamp(lagStats.getObject2());
+
+                Pair<Long, Long> inflightStats = consumerLagCalculator.getInFlightMsgStats(requestHeader.getConsumerGroup(), topic, i, isPop);
+                offsetWrapper.setInFlightMsgCountEstimatedAccumulation(inflightStats.getObject1());
+                offsetWrapper.setEarliestUnPulledTimestamp(inflightStats.getObject2());
 
                 long timeOffset = consumerOffset - 1;
                 if (timeOffset >= 0) {

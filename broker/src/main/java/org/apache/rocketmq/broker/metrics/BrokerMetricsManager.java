@@ -138,6 +138,7 @@ public class BrokerMetricsManager {
     public static final List<String> SYSTEM_GROUP_PREFIX_LIST = new ArrayList<String>() {
         {
             add(MixAll.CID_RMQ_SYS_PREFIX.toLowerCase());
+            add("automq_housekeeping".toLowerCase());
         }
     };
 

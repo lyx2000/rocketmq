@@ -20,7 +20,14 @@ public class OffsetWrapper {
     private long brokerOffset;
     private long consumerOffset;
     private long pullOffset;
+
+
+    private long lagEstimatedAccumulation;
+    private long inFlightMsgCountEstimatedAccumulation;
+
     private long lastTimestamp;
+    private long earliestUnconsumedTimestamp;
+    private long earliestUnPulledTimestamp;
 
     public long getBrokerOffset() {
         return brokerOffset;
@@ -46,11 +53,43 @@ public class OffsetWrapper {
         this.pullOffset = pullOffset;
     }
 
+    public long getLagEstimatedAccumulation() {
+        return lagEstimatedAccumulation;
+    }
+
+    public void setLagEstimatedAccumulation(long lagEstimatedAccumulation) {
+        this.lagEstimatedAccumulation = lagEstimatedAccumulation;
+    }
+
+    public long getInFlightMsgCountEstimatedAccumulation() {
+        return inFlightMsgCountEstimatedAccumulation;
+    }
+
+    public void setInFlightMsgCountEstimatedAccumulation(long inFlightMsgCountEstimatedAccumulation) {
+        this.inFlightMsgCountEstimatedAccumulation = inFlightMsgCountEstimatedAccumulation;
+    }
+
     public long getLastTimestamp() {
         return lastTimestamp;
     }
 
     public void setLastTimestamp(long lastTimestamp) {
         this.lastTimestamp = lastTimestamp;
+    }
+
+    public long getEarliestUnconsumedTimestamp() {
+        return earliestUnconsumedTimestamp;
+    }
+
+    public void setEarliestUnconsumedTimestamp(long earliestUnconsumedTimestamp) {
+        this.earliestUnconsumedTimestamp = earliestUnconsumedTimestamp;
+    }
+
+    public long getEarliestUnPulledTimestamp() {
+        return earliestUnPulledTimestamp;
+    }
+
+    public void setEarliestUnPulledTimestamp(long earliestUnPulledTimestamp) {
+        this.earliestUnPulledTimestamp = earliestUnPulledTimestamp;
     }
 }

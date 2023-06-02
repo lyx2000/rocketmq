@@ -3,7 +3,7 @@ FROM openjdk:17-jdk-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl unzip procps vim inetutils-ping && apt-get clean
 
-ENV ROCKETMQ_VERSION 5.1.1-SNAPSHOT
+ENV ROCKETMQ_VERSION 5.1.1-automq-SNAPSHOT
 ENV ROCKETMQ_HOME  /root/rocketmq/rocketmq-${ROCKETMQ_VERSION}
 
 WORKDIR  ${ROCKETMQ_HOME}
