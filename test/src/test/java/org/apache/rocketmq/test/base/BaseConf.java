@@ -93,15 +93,15 @@ public class BaseConf {
 
         brokerController1 = IntegrationTestBase.createAndStartBroker(NAMESRV_ADDR);
         log.debug("Broker {} started, listening: {}", brokerController1.getBrokerConfig().getBrokerName(),
-            brokerController1.getBrokerConfig().getListenPort());
+            brokerController1.getNettyServerConfig().getListenPort());
 
         brokerController2 = IntegrationTestBase.createAndStartBroker(NAMESRV_ADDR);
         log.debug("Broker {} started, listening: {}", brokerController2.getBrokerConfig().getBrokerName(),
-            brokerController2.getBrokerConfig().getListenPort());
+            brokerController2.getNettyServerConfig().getListenPort());
 
         brokerController3 = IntegrationTestBase.createAndStartBroker(NAMESRV_ADDR);
-        log.debug("Broker {} started, listening: {}", brokerController2.getBrokerConfig().getBrokerName(),
-            brokerController2.getBrokerConfig().getListenPort());
+        log.debug("Broker {} started, listening: {}", brokerController3.getBrokerConfig().getBrokerName(),
+            brokerController3.getNettyServerConfig().getListenPort());
 
         CLUSTER_NAME = brokerController1.getBrokerConfig().getBrokerClusterName();
         BROKER1_NAME = brokerController1.getBrokerConfig().getBrokerName();

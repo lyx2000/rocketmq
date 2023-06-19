@@ -18,6 +18,7 @@ package org.apache.rocketmq.common.topic;
 
 import java.util.HashSet;
 import java.util.Set;
+import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
 
 public class TopicValidator {
@@ -31,6 +32,7 @@ public class TopicValidator {
     public static final String RMQ_SYS_TRANS_CHECK_MAX_TIME_TOPIC = "TRANS_CHECK_MAX_TIME_TOPIC";
     public static final String RMQ_SYS_SELF_TEST_TOPIC = "SELF_TEST_TOPIC";
     public static final String RMQ_SYS_OFFSET_MOVED_EVENT = "OFFSET_MOVED_EVENT";
+    public static final String AUTOMQ_HOUSEKEEPING_TOPIC_PREFIX = "automq_housekeeping";
 
     public static final String SYSTEM_TOPIC_PREFIX = "rmq_sys_";
     public static final String SYNC_BROKER_MEMBER_GROUP_PREFIX = SYSTEM_TOPIC_PREFIX + "SYNC_BROKER_MEMBER_";
@@ -136,6 +138,14 @@ public class TopicValidator {
 
     public static boolean isSystemTopic(String topic) {
         return SYSTEM_TOPIC_SET.contains(topic) || topic.startsWith(SYSTEM_TOPIC_PREFIX);
+    }
+
+    public static boolean isHousekeepingTopic(String topic) {
+        return topic.startsWith(AUTOMQ_HOUSEKEEPING_TOPIC_PREFIX);
+    }
+
+    public static boolean isRetryOrDlqTopic(String topic) {
+        return topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX) || topic.startsWith(MixAll.DLQ_GROUP_TOPIC_PREFIX);
     }
 
     public static boolean isNotAllowedSendTopic(String topic) {

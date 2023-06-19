@@ -43,6 +43,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.acl.AccessValidator;
 import org.apache.rocketmq.acl.plain.PlainAccessValidator;
 import org.apache.rocketmq.broker.client.ClientHousekeepingService;
@@ -55,8 +56,8 @@ import org.apache.rocketmq.broker.client.net.Broker2Client;
 import org.apache.rocketmq.broker.client.rebalance.RebalanceLockManager;
 import org.apache.rocketmq.broker.controller.ReplicasManager;
 import org.apache.rocketmq.broker.dledger.DLedgerRoleChangeHandler;
-import org.apache.rocketmq.broker.eventtrack.EventTrackerUtil;
 import org.apache.rocketmq.broker.eventtrack.EventTrackerManager;
+import org.apache.rocketmq.broker.eventtrack.EventTrackerUtil;
 import org.apache.rocketmq.broker.eventtrack.EventType;
 import org.apache.rocketmq.broker.eventtrack.listener.ConsumerEventTrackListener;
 import org.apache.rocketmq.broker.eventtrack.listener.GroupConfigEventTrackListener;
@@ -119,11 +120,13 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.attribute.TopicMessageType;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageExtBrokerInner;
 import org.apache.rocketmq.common.stats.MomentStatsItem;
+import org.apache.rocketmq.common.topic.TopicValidator;
 import org.apache.rocketmq.common.utils.ServiceProvider;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
 import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
@@ -143,9 +146,11 @@ import org.apache.rocketmq.remoting.protocol.NamespaceUtil;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.remoting.protocol.RequestCode;
 import org.apache.rocketmq.remoting.protocol.body.BrokerMemberGroup;
+import org.apache.rocketmq.remoting.protocol.body.ClusterInfo;
 import org.apache.rocketmq.remoting.protocol.body.TopicConfigAndMappingSerializeWrapper;
 import org.apache.rocketmq.remoting.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.remoting.protocol.namesrv.RegisterBrokerResult;
+import org.apache.rocketmq.remoting.protocol.route.BrokerData;
 import org.apache.rocketmq.remoting.protocol.statictopic.TopicQueueMappingDetail;
 import org.apache.rocketmq.remoting.protocol.statictopic.TopicQueueMappingInfo;
 import org.apache.rocketmq.srvutil.FileWatchService;
@@ -432,6 +437,71 @@ public class BrokerController {
         }
     }
 
+    private boolean syncTopicConfig() {
+        try {
+            for (String topic : topicConfigManager.getTopicConfigTable().keySet()) {
+                // ignore retry, dlq and housekeeping topic
+                if (TopicValidator.isRetryOrDlqTopic(topic) || TopicValidator.isHousekeepingTopic(topic)) {
+                    continue;
+                }
+                // skip syncing topic config if it has user topic
+                if (!TopicValidator.isSystemTopic(topic)) {
+                    LOG.info("BrokerController#syncTopicConfig: we can skip synchronizing the topic configuration since the broker already has a user-created topic {}, indicating that it is not in the initialization stage", topic);
+                    return true;
+                }
+            }
+
+            // get topic config from other broker in this cluster
+            ClusterInfo clusterInfo = brokerOuterAPI.getBrokerClusterInfo();
+            Set<String> brokerSet = clusterInfo.getClusterAddrTable().get(brokerConfig.getBrokerClusterName());
+            if (brokerSet == null || brokerSet.isEmpty()) {
+                // no other broker in this cluster
+                return true;
+            }
+            brokerSet.remove(brokerConfig.getBrokerName());
+
+            // get first broker in this cluster
+            String targetBrokerName = brokerSet.stream().sorted().iterator().next();
+            BrokerData brokerData = clusterInfo.getBrokerAddrTable().get(targetBrokerName);
+            if (brokerData == null) {
+                LOG.error("BrokerController#syncTopicConfig: get broker address failed, target broker name: {}", targetBrokerName);
+                return false;
+            }
+
+            HashMap<Long, String> targetBrokerAddrs = brokerData.getBrokerAddrs();
+            if (targetBrokerAddrs == null || targetBrokerAddrs.isEmpty()) {
+                LOG.error("BrokerController#syncTopicConfig: get broker address failed, target broker address table is empty", targetBrokerName);
+                return false;
+            }
+            String targetBrokerAddr = targetBrokerAddrs.values().iterator().next();
+
+            TopicConfigAndMappingSerializeWrapper topicWrapper = brokerOuterAPI.getAllTopicConfig(targetBrokerAddr);
+            ConcurrentMap<String, TopicConfig> newTopicConfigTable = topicWrapper.getTopicConfigTable();
+            if (newTopicConfigTable == null || newTopicConfigTable.isEmpty()) {
+                LOG.error("BrokerController#syncTopicConfig: get topic config failed, target broker name: {}", targetBrokerName);
+                return false;
+            }
+
+            newTopicConfigTable.entrySet().removeIf(item -> {
+                // no need to sync retry, dlq, housekeeping and system topic
+                if (TopicValidator.isRetryOrDlqTopic(item.getKey())
+                    || TopicValidator.isSystemTopic(item.getKey())
+                    || TopicValidator.isHousekeepingTopic(item.getKey())) {
+                    return true;
+                }
+
+                // do not sync fifo topic to keep partition count consistent
+                return item.getValue().getTopicMessageType() == TopicMessageType.FIFO;
+            });
+            topicConfigManager.getTopicConfigTable().putAll(newTopicConfigTable);
+            LOG.info("BrokerController#syncTopicConfig: sync topic config from {} success", targetBrokerName);
+            return true;
+        } catch (Exception e) {
+            LOG.error("BrokerController#syncTopicConfig: sync topic config failed", e);
+        }
+        return false;
+    }
+
     public BrokerConfig getBrokerConfig() {
         return brokerConfig;
     }
@@ -457,7 +527,7 @@ public class BrokerController {
     }
 
     protected void initializeRemotingServer() throws CloneNotSupportedException {
-        this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
+        this.remotingServer = new NettyRemotingServer((NettyServerConfig) this.nettyServerConfig.clone(), this.clientHousekeepingService);
         NettyServerConfig fastConfig = (NettyServerConfig) this.nettyServerConfig.clone();
 
         int listeningPort = nettyServerConfig.getListenPort() - 2;
@@ -1516,6 +1586,8 @@ public class BrokerController {
             // In test scenarios where it is up to OS to pick up an available port, set the listening port back to config
             if (null != nettyServerConfig && 0 == nettyServerConfig.getListenPort()) {
                 nettyServerConfig.setListenPort(remotingServer.localListenPort());
+
+                ((NettyRemotingServer) fastRemotingServer).getNettyServerConfig().setListenPort(remotingServer.localListenPort() - 2);
             }
         }
 
@@ -1588,7 +1660,6 @@ public class BrokerController {
     }
 
     public void start() throws Exception {
-
         this.shouldStartTime = System.currentTimeMillis() + messageStoreConfig.getDisappearTimeAfterStart();
 
         if (messageStoreConfig.getTotalReplicas() > 1 && this.brokerConfig.isEnableSlaveActingMaster()) {
@@ -1597,6 +1668,10 @@ public class BrokerController {
 
         if (this.brokerOuterAPI != null) {
             this.brokerOuterAPI.start();
+
+            if (StringUtils.isNotBlank(brokerConfig.getNamesrvAddr()) && !syncTopicConfig()) {
+                throw new IllegalStateException("sync topic config failed");
+            }
         }
 
         startBasicService();

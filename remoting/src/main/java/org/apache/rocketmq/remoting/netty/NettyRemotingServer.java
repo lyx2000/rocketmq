@@ -126,6 +126,10 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         loadSslContext();
     }
 
+    public NettyServerConfig getNettyServerConfig() {
+        return nettyServerConfig;
+    }
+
     private EventLoopGroup buildEventLoopGroupSelector() {
         if (useEpoll()) {
             return new EpollEventLoopGroup(nettyServerConfig.getServerSelectorThreads(), new ThreadFactoryImpl("NettyServerEPOLLSelector_"));
