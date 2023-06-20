@@ -113,6 +113,7 @@ import org.apache.rocketmq.broker.transaction.queue.DefaultTransactionalMessageC
 import org.apache.rocketmq.broker.transaction.queue.TransactionalMessageBridge;
 import org.apache.rocketmq.broker.transaction.queue.TransactionalMessageServiceImpl;
 import org.apache.rocketmq.broker.util.HookUtils;
+import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.common.AbstractBrokerRunnable;
 import org.apache.rocketmq.common.BrokerConfig;
 import org.apache.rocketmq.common.BrokerIdentity;
@@ -134,6 +135,9 @@ import org.apache.rocketmq.remoting.Configuration;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.RemotingServer;
 import org.apache.rocketmq.remoting.common.TlsMode;
+import org.apache.rocketmq.remoting.exception.RemotingConnectException;
+import org.apache.rocketmq.remoting.exception.RemotingSendRequestException;
+import org.apache.rocketmq.remoting.exception.RemotingTimeoutException;
 import org.apache.rocketmq.remoting.netty.NettyClientConfig;
 import org.apache.rocketmq.remoting.netty.NettyRemotingServer;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -147,12 +151,14 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.remoting.protocol.RequestCode;
 import org.apache.rocketmq.remoting.protocol.body.BrokerMemberGroup;
 import org.apache.rocketmq.remoting.protocol.body.ClusterInfo;
+import org.apache.rocketmq.remoting.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.remoting.protocol.body.TopicConfigAndMappingSerializeWrapper;
 import org.apache.rocketmq.remoting.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.remoting.protocol.namesrv.RegisterBrokerResult;
 import org.apache.rocketmq.remoting.protocol.route.BrokerData;
 import org.apache.rocketmq.remoting.protocol.statictopic.TopicQueueMappingDetail;
 import org.apache.rocketmq.remoting.protocol.statictopic.TopicQueueMappingInfo;
+import org.apache.rocketmq.remoting.protocol.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.srvutil.FileWatchService;
 import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.MessageArrivingListener;
@@ -437,7 +443,7 @@ public class BrokerController {
         }
     }
 
-    private boolean syncTopicConfig() {
+    private boolean syncConfig() {
         try {
             for (String topic : topicConfigManager.getTopicConfigTable().keySet()) {
                 // ignore retry, dlq and housekeeping topic
@@ -446,7 +452,7 @@ public class BrokerController {
                 }
                 // skip syncing topic config if it has user topic
                 if (!TopicValidator.isSystemTopic(topic)) {
-                    LOG.info("BrokerController#syncTopicConfig: we can skip synchronizing the topic configuration since the broker already has a user-created topic {}, indicating that it is not in the initialization stage", topic);
+                    LOG.info("BrokerController#syncConfig: we can skip synchronizing the topic configuration since the broker already has a user-created topic {}, indicating that it is not in the initialization stage", topic);
                     return true;
                 }
             }
@@ -464,42 +470,73 @@ public class BrokerController {
             String targetBrokerName = brokerSet.stream().sorted().iterator().next();
             BrokerData brokerData = clusterInfo.getBrokerAddrTable().get(targetBrokerName);
             if (brokerData == null) {
-                LOG.error("BrokerController#syncTopicConfig: get broker address failed, target broker name: {}", targetBrokerName);
+                LOG.error("BrokerController#syncConfig: get broker address failed, target broker name: {}", targetBrokerName);
                 return false;
             }
 
             HashMap<Long, String> targetBrokerAddrs = brokerData.getBrokerAddrs();
             if (targetBrokerAddrs == null || targetBrokerAddrs.isEmpty()) {
-                LOG.error("BrokerController#syncTopicConfig: get broker address failed, target broker address table is empty", targetBrokerName);
+                LOG.error("BrokerController#syncConfig: get broker address failed, target broker address table is empty", targetBrokerName);
                 return false;
             }
             String targetBrokerAddr = targetBrokerAddrs.values().iterator().next();
 
-            TopicConfigAndMappingSerializeWrapper topicWrapper = brokerOuterAPI.getAllTopicConfig(targetBrokerAddr);
-            ConcurrentMap<String, TopicConfig> newTopicConfigTable = topicWrapper.getTopicConfigTable();
-            if (newTopicConfigTable == null || newTopicConfigTable.isEmpty()) {
-                LOG.error("BrokerController#syncTopicConfig: get topic config failed, target broker name: {}", targetBrokerName);
-                return false;
-            }
-
-            newTopicConfigTable.entrySet().removeIf(item -> {
-                // no need to sync retry, dlq, housekeeping and system topic
-                if (TopicValidator.isRetryOrDlqTopic(item.getKey())
-                    || TopicValidator.isSystemTopic(item.getKey())
-                    || TopicValidator.isHousekeepingTopic(item.getKey())) {
-                    return true;
-                }
-
-                // do not sync fifo topic to keep partition count consistent
-                return item.getValue().getTopicMessageType() == TopicMessageType.FIFO;
-            });
-            topicConfigManager.getTopicConfigTable().putAll(newTopicConfigTable);
-            LOG.info("BrokerController#syncTopicConfig: sync topic config from {} success", targetBrokerName);
-            return true;
+            return syncSubscriptionGroupConfig(targetBrokerName, targetBrokerAddr)
+                && syncTopicConfig(targetBrokerName, targetBrokerAddr);
         } catch (Exception e) {
-            LOG.error("BrokerController#syncTopicConfig: sync topic config failed", e);
+            LOG.error("BrokerController#syncConfig: sync topic config failed", e);
         }
         return false;
+    }
+
+    private boolean syncTopicConfig(String targetBrokerName,
+        String targetBrokerAddr) throws RemotingConnectException, RemotingSendRequestException, RemotingTimeoutException, MQBrokerException, InterruptedException {
+        TopicConfigAndMappingSerializeWrapper topicWrapper = brokerOuterAPI.getAllTopicConfig(targetBrokerAddr);
+        ConcurrentMap<String, TopicConfig> newTopicConfigTable = topicWrapper.getTopicConfigTable();
+        if (newTopicConfigTable == null || newTopicConfigTable.isEmpty()) {
+            LOG.error("BrokerController#syncTopicConfig: get topic config failed, target broker name: {}", targetBrokerName);
+            return false;
+        }
+
+        newTopicConfigTable.entrySet().removeIf(item -> {
+            // no need to sync retry, dlq, housekeeping and system topic
+            if (TopicValidator.isRetryOrDlqTopic(item.getKey())
+                || TopicValidator.isSystemTopic(item.getKey())
+                || TopicValidator.isHousekeepingTopic(item.getKey())) {
+                return true;
+            }
+
+            // do not sync fifo topic to keep partition count consistent
+            return item.getValue().getTopicMessageType() == TopicMessageType.FIFO;
+        });
+        topicConfigManager.getTopicConfigTable().putAll(newTopicConfigTable);
+        topicConfigManager.persist();
+        LOG.info("BrokerController#syncTopicConfig: sync topic config from {} success", targetBrokerName);
+        return true;
+    }
+
+    private boolean syncSubscriptionGroupConfig(String targetBrokerName,
+        String targetBrokerAddr) throws RemotingSendRequestException, RemotingConnectException, RemotingTimeoutException, MQBrokerException, InterruptedException {
+        SubscriptionGroupWrapper groupWrapper = brokerOuterAPI.getAllSubscriptionGroupConfig(targetBrokerAddr);
+        ConcurrentMap<String, SubscriptionGroupConfig> newGroupConfigTable = groupWrapper.getSubscriptionGroupTable();
+        if (newGroupConfigTable == null || newGroupConfigTable.isEmpty()) {
+            LOG.error("BrokerController#syncSubscriptionGroupConfig: get group config failed, target broker name: {}", targetBrokerName);
+            return false;
+        }
+
+        // no need to sync system group
+        newGroupConfigTable.entrySet().removeIf(item -> item.getKey().toUpperCase().startsWith(MixAll.CID_RMQ_SYS_PREFIX));
+        // create retry topic for new group
+        newGroupConfigTable.forEach((group, config) -> {
+            TopicConfig pullRetryTopicConfig = new TopicConfig(MixAll.getRetryTopic(group));
+            pullRetryTopicConfig.setReadQueueNums(1);
+            pullRetryTopicConfig.setWriteQueueNums(1);
+            topicConfigManager.createTopicIfAbsent(pullRetryTopicConfig, false);
+        });
+        subscriptionGroupManager.getSubscriptionGroupTable().putAll(newGroupConfigTable);
+        subscriptionGroupManager.persist();
+        LOG.info("BrokerController#syncSubscriptionGroupConfig: sync group config from {} success", targetBrokerName);
+        return true;
     }
 
     public BrokerConfig getBrokerConfig() {
@@ -751,7 +788,7 @@ public class BrokerController {
                                 BrokerController.this.getSlaveSynchronize().syncAll();
                                 lastSyncTimeMs = System.currentTimeMillis();
                             }
-                            
+
                             //timer checkpoint, latency-sensitive, so sync it more frequently
                             if (messageStoreConfig.isTimerWheelEnable()) {
                                 BrokerController.this.getSlaveSynchronize().syncTimerCheckPoint();
@@ -1669,7 +1706,7 @@ public class BrokerController {
         if (this.brokerOuterAPI != null) {
             this.brokerOuterAPI.start();
 
-            if (StringUtils.isNotBlank(brokerConfig.getNamesrvAddr()) && !syncTopicConfig()) {
+            if (StringUtils.isNotBlank(brokerConfig.getNamesrvAddr()) && !syncConfig()) {
                 throw new IllegalStateException("sync topic config failed");
             }
         }
