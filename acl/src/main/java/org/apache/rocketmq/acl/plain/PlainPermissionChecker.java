@@ -18,21 +18,32 @@
 package org.apache.rocketmq.acl.plain;
 
 import java.util.Map;
+import org.apache.rocketmq.acl.event.detail.AccessDeniedEventDetail;
 import org.apache.rocketmq.acl.AccessResource;
 import org.apache.rocketmq.acl.PermissionChecker;
 import org.apache.rocketmq.acl.common.AclException;
 import org.apache.rocketmq.acl.common.Permission;
+import org.apache.rocketmq.common.event.EventTrackerManager;
+import org.apache.rocketmq.common.event.EventType;
 
 public class PlainPermissionChecker implements PermissionChecker {
     public void check(AccessResource checkedAccess, AccessResource ownedAccess) {
         PlainAccessResource checkedPlainAccess = (PlainAccessResource) checkedAccess;
         PlainAccessResource ownedPlainAccess = (PlainAccessResource) ownedAccess;
 
+        AccessDeniedEventDetail deniedEventDetail = new AccessDeniedEventDetail(AccessDeniedEventDetail.EventType.NO_PERMISSION,
+            checkedPlainAccess.getClientId(),
+            checkedPlainAccess.getAccessKey(),
+            checkedPlainAccess.getWhiteRemoteAddress());
+        deniedEventDetail.setRequestCode(checkedPlainAccess.getRequestCode());
+
         if (ownedPlainAccess.isAdmin()) {
             // admin user don't need verification
             return;
         }
         if (Permission.needAdminPerm(checkedPlainAccess.getRequestCode())) {
+            deniedEventDetail.setSubType(AccessDeniedEventDetail.EventType.NO_ADMIN_PERMISSION);
+            EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
             throw new AclException(String.format("Need admin permission for request code=%d, but accessKey=%s is not", checkedPlainAccess.getRequestCode(), ownedPlainAccess.getAccessKey()));
         }
 
@@ -54,11 +65,15 @@ public class PlainPermissionChecker implements PermissionChecker {
                 byte ownedPerm = isGroup ? ownedPlainAccess.getDefaultGroupPerm() :
                     ownedPlainAccess.getDefaultTopicPerm();
                 if (!Permission.checkPermission(neededPerm, ownedPerm)) {
+                    deniedEventDetail.setResourceAction(needCheckedEntry.getKey(), needCheckedEntry.getValue(), isGroup);
+                    EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
                     throw new AclException(String.format("No default permission for %s", PlainAccessResource.printStr(resource, isGroup)));
                 }
                 continue;
             }
             if (!Permission.checkPermission(neededPerm, ownedPermMap.get(resource))) {
+                deniedEventDetail.setResourceAction(needCheckedEntry.getKey(), needCheckedEntry.getValue(), isGroup);
+                EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
                 throw new AclException(String.format("No permission for %s", PlainAccessResource.printStr(resource, isGroup)));
             }
         }

@@ -30,6 +30,12 @@ public enum EventType {
 
     STARTUP_EVENT,
 
-    SHUTDOWN_EVENT
+    SHUTDOWN_EVENT,
+
+    ACL_ACCESS_EVENT,
+
+    ACL_CONFIG_EVENT
+
+
 
 }

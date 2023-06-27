@@ -63,6 +63,7 @@ public class PlainAccessControlFlowTest {
 
     public static final String DEFAULT_GLOBAL_WHITE_ADDR = "172.16.123.123";
     public static final List<String> DEFAULT_GLOBAL_WHITE_ADDRS_LIST = Collections.singletonList(DEFAULT_GLOBAL_WHITE_ADDR);
+    private static final String CLIENT_ID = "clientId";
 
     @Test
     public void testEmptyAclFolderCase() throws NoSuchFieldException, IllegalAccessException,
@@ -242,7 +243,7 @@ public class PlainAccessControlFlowTest {
         buf.position(0);
         try {
             PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(
-                RemotingCommand.decode(buf), remoteAddr);
+                RemotingCommand.decode(buf), remoteAddr, CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -273,7 +274,7 @@ public class PlainAccessControlFlowTest {
         buf.position(0);
         try {
             PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(
-                RemotingCommand.decode(buf), remoteAddr);
+                RemotingCommand.decode(buf), remoteAddr, CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();

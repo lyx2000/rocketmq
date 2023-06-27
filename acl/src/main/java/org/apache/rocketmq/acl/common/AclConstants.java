@@ -50,6 +50,8 @@ public class AclConstants {
 
     public static final String DENY = "DENY";
 
+    public static final String ANY = "ANY";
+
     public static final String PUB_SUB = "PUB|SUB";
 
     public static final String SUB_PUB = "SUB|PUB";

@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.acl.plain;
 
+import com.google.common.collect.Maps;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
@@ -37,10 +38,14 @@ import org.apache.rocketmq.acl.common.AclConstants;
 import org.apache.rocketmq.acl.common.AclException;
 import org.apache.rocketmq.acl.common.AclUtils;
 import org.apache.rocketmq.acl.common.Permission;
+import org.apache.rocketmq.acl.event.detail.AccessDeniedEventDetail;
+import org.apache.rocketmq.acl.event.detail.AclConfigChangeEventDetail;
 import org.apache.rocketmq.common.AclConfig;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.PlainAccessConfig;
 import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.common.event.EventTrackerManager;
+import org.apache.rocketmq.common.event.EventType;
 import org.apache.rocketmq.common.topic.TopicValidator;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
 import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
@@ -59,6 +64,8 @@ public class PlainPermissionManager {
     private String defaultAclFile;
 
     private Map<String/** fileFullPath **/, Map<String/** AccessKey **/, PlainAccessResource>> aclPlainAccessResourceMap = new HashMap<>();
+
+    private Map<String/** fileFullPath **/, Map<String/** AccessKey **/, PlainAccessConfig>> aclPlainAccessConfigMap = new HashMap<>();
 
     private Map<String/** AccessKey **/, String/** fileFullPath **/> accessKeyTable = new HashMap<>();
 
@@ -114,6 +121,7 @@ public class PlainPermissionManager {
         }
 
         Map<String, Map<String, PlainAccessResource>> aclPlainAccessResourceMap = new HashMap<>();
+        Map<String, Map<String, PlainAccessConfig>> aclPlainAccessConfigMap = new HashMap<>();
         Map<String, String> accessKeyTable = new HashMap<>();
         List<RemoteAddressStrategy> globalWhiteRemoteAddressStrategy = new ArrayList<>();
         Map<String, List<RemoteAddressStrategy>> globalWhiteRemoteAddressStrategyMap = new HashMap<>();
@@ -151,12 +159,14 @@ public class PlainPermissionManager {
 
             List<PlainAccessConfig> accounts = plainAclConfData.getAccounts();
             Map<String, PlainAccessResource> plainAccessResourceMap = new HashMap<>();
+            Map<String, PlainAccessConfig> plainAccessConfigMap = new HashMap<>();
             if (accounts != null && !accounts.isEmpty()) {
                 for (PlainAccessConfig plainAccessConfig : accounts) {
                     PlainAccessResource plainAccessResource = buildPlainAccessResource(plainAccessConfig);
                     //AccessKey can not be defined in multiple ACL files
                     if (accessKeyTable.get(plainAccessResource.getAccessKey()) == null) {
                         plainAccessResourceMap.put(plainAccessResource.getAccessKey(), plainAccessResource);
+                        plainAccessConfigMap.put(plainAccessResource.getAccessKey(), plainAccessConfig);
                         accessKeyTable.put(plainAccessResource.getAccessKey(), currentFile);
                     } else {
                         log.warn("The accessKey {} is repeated in multiple ACL files", plainAccessResource.getAccessKey());
@@ -165,6 +175,7 @@ public class PlainPermissionManager {
             }
             if (plainAccessResourceMap.size() > 0) {
                 aclPlainAccessResourceMap.put(currentFile, plainAccessResourceMap);
+                aclPlainAccessConfigMap.put(currentFile, plainAccessConfigMap);
             }
 
             List<PlainAccessData.DataVersion> dataVersions = plainAclConfData.getDataVersion();
@@ -185,6 +196,7 @@ public class PlainPermissionManager {
         this.globalWhiteRemoteAddressStrategyMap = globalWhiteRemoteAddressStrategyMap;
         this.globalWhiteRemoteAddressStrategy = globalWhiteRemoteAddressStrategy;
         this.aclPlainAccessResourceMap = aclPlainAccessResourceMap;
+        this.aclPlainAccessConfigMap = aclPlainAccessConfigMap;
         this.accessKeyTable = accessKeyTable;
     }
 
@@ -208,6 +220,7 @@ public class PlainPermissionManager {
     public void load(String aclFilePath) {
         aclFilePath = MixAll.dealFilePath(aclFilePath);
         Map<String, PlainAccessResource> plainAccessResourceMap = new HashMap<>();
+        Map<String, PlainAccessConfig> plainAccessConfigMap = new HashMap<>();
         List<RemoteAddressStrategy> globalWhiteRemoteAddressStrategy = new ArrayList<>();
 
         PlainAccessData plainAclConfData = AclUtils.getYamlDataObject(aclFilePath,
@@ -224,7 +237,7 @@ public class PlainPermissionManager {
                     getRemoteAddressStrategy(globalWhiteRemoteAddressesList.get(i)));
             }
         }
-
+        // aclPlainAccessConfigMap
         this.globalWhiteRemoteAddressStrategy.addAll(globalWhiteRemoteAddressStrategy);
         if (this.globalWhiteRemoteAddressStrategyMap.get(aclFilePath) != null) {
             List<RemoteAddressStrategy> remoteAddressStrategyList = this.globalWhiteRemoteAddressStrategyMap.get(aclFilePath);
@@ -241,6 +254,7 @@ public class PlainPermissionManager {
                 //AccessKey can not be defined in multiple ACL files
                 String oldPath = this.accessKeyTable.get(plainAccessResource.getAccessKey());
                 if (oldPath == null || aclFilePath.equals(oldPath)) {
+                    plainAccessConfigMap.put(plainAccessResource.getAccessKey(), plainAccessConfig);
                     plainAccessResourceMap.put(plainAccessResource.getAccessKey(), plainAccessResource);
                     this.accessKeyTable.put(plainAccessResource.getAccessKey(), aclFilePath);
                 } else {
@@ -260,10 +274,44 @@ public class PlainPermissionManager {
         }
 
         this.aclPlainAccessResourceMap.put(aclFilePath, plainAccessResourceMap);
+        logAclConfigChangeEvent(this.aclPlainAccessConfigMap.containsKey(aclFilePath) ?
+            this.aclPlainAccessConfigMap.get(aclFilePath) : Maps.newHashMap(), plainAccessConfigMap);
+        this.aclPlainAccessConfigMap.put(aclFilePath, plainAccessConfigMap);
         this.dataVersionMap.put(aclFilePath, dataVersion);
         if (aclFilePath.equals(defaultAclFile)) {
             this.dataVersion.assignNewOne(dataVersion);
         }
+    }
+
+    private void logAclConfigChangeEvent(Map<String, PlainAccessConfig> origin,
+        Map<String, PlainAccessConfig> current) {
+        current.keySet().forEach(key -> {
+            PlainAccessConfig originConfig = origin.get(key);
+            PlainAccessConfig currentConfig = current.get(key);
+            AclConfigChangeEventDetail detail = new AclConfigChangeEventDetail(currentConfig,
+                originConfig,
+                AclConfigChangeEventDetail.EventType.ACL_ACCOUNT_CREATE_EVENT);
+            if (originConfig == null) {
+                // new
+                EventTrackerManager.trackEvent(EventType.ACL_CONFIG_EVENT, detail);
+            } else if (!currentConfig.equals(originConfig)) {
+                // update
+                detail.setSubType(AclConfigChangeEventDetail.EventType.ACL_ACCOUNT_UPDATE_EVENT);
+                EventTrackerManager.trackEvent(EventType.ACL_CONFIG_EVENT, detail);
+            }
+
+        });
+        // delete
+        origin.keySet().forEach(key -> {
+            PlainAccessConfig originConfig = origin.get(key);
+            if (!current.containsKey(key)) {
+                AclConfigChangeEventDetail detail = new AclConfigChangeEventDetail(null,
+                    originConfig,
+                    AclConfigChangeEventDetail.EventType.ACL_ACCOUNT_DELETE_EVENT);
+                EventTrackerManager.trackEvent(EventType.ACL_CONFIG_EVENT, detail);
+            }
+        });
+
     }
 
     @Deprecated
@@ -604,19 +652,27 @@ public class PlainPermissionManager {
                 return;
             }
         }
+        AccessDeniedEventDetail deniedEventDetail = new AccessDeniedEventDetail(AccessDeniedEventDetail.EventType.WRONG_ACL_CONFIG,
+            plainAccessResource.getClientId(),
+            plainAccessResource.getAccessKey(),
+            plainAccessResource.getWhiteRemoteAddress());
 
         if (plainAccessResource.getAccessKey() == null) {
+            EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
             throw new AclException("No accessKey is configured");
         }
 
         if (!accessKeyTable.containsKey(plainAccessResource.getAccessKey())) {
+            EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
             throw new AclException(String.format("No acl config for %s", plainAccessResource.getAccessKey()));
         }
 
         // Check the white addr for accessKey
         String aclFileName = accessKeyTable.get(plainAccessResource.getAccessKey());
+
         PlainAccessResource ownedAccess = aclPlainAccessResourceMap.getOrDefault(aclFileName, new HashMap<>()).get(plainAccessResource.getAccessKey());
         if (ownedAccess == null) {
+            EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
             throw new AclException(String.format("No PlainAccessResource for accessKey=%s", plainAccessResource.getAccessKey()));
         }
         if (ownedAccess.getRemoteAddressStrategy().match(plainAccessResource)) {
@@ -626,6 +682,7 @@ public class PlainPermissionManager {
         // Check the signature
         String signature = AclUtils.calSignature(plainAccessResource.getContent(), ownedAccess.getSecretKey());
         if (!signature.equals(plainAccessResource.getSignature())) {
+            EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
             throw new AclException(String.format("Check signature failed for accessKey=%s", plainAccessResource.getAccessKey()));
         }
 

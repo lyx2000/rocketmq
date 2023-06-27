@@ -66,6 +66,8 @@ public class PlainAccessValidatorTest {
 
     private File confHome;
 
+    private static final String CLIENT_ID = "clientId";
+
     @Before
     public void init() throws IOException {
         String folder = "conf";
@@ -96,7 +98,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "127.0.0.1");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "127.0.0.1", CLIENT_ID);
             String signature = AclUtils.calSignature(accessResource.getContent(), sessionCredentials.getSecretKey());
 
             Assert.assertEquals(accessResource.getSignature(), signature);
@@ -120,7 +122,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -142,7 +144,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -163,7 +165,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -184,7 +186,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -205,7 +207,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6:9876");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6:9876", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -217,16 +219,16 @@ public class PlainAccessValidatorTest {
     @Test
     public void validateForAdminCommandWithOutAclRPCHook() {
         RemotingCommand consumerOffsetAdminRequest = RemotingCommand.createRequestCommand(RequestCode.GET_ALL_CONSUMER_OFFSET, null);
-        plainAccessValidator.parse(consumerOffsetAdminRequest, "192.168.0.1:9876");
+        plainAccessValidator.parse(consumerOffsetAdminRequest, "192.168.0.1:9876", CLIENT_ID);
 
         RemotingCommand subscriptionGroupAdminRequest = RemotingCommand.createRequestCommand(RequestCode.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, null);
-        plainAccessValidator.parse(subscriptionGroupAdminRequest, "192.168.0.1:9876");
+        plainAccessValidator.parse(subscriptionGroupAdminRequest, "192.168.0.1:9876", CLIENT_ID);
 
         RemotingCommand delayOffsetAdminRequest = RemotingCommand.createRequestCommand(RequestCode.GET_ALL_DELAY_OFFSET, null);
-        plainAccessValidator.parse(delayOffsetAdminRequest, "192.168.0.1:9876");
+        plainAccessValidator.parse(delayOffsetAdminRequest, "192.168.0.1:9876", CLIENT_ID);
 
         RemotingCommand allTopicConfigAdminRequest = RemotingCommand.createRequestCommand(RequestCode.GET_ALL_TOPIC_CONFIG, null);
-        plainAccessValidator.parse(allTopicConfigAdminRequest, "192.168.0.1:9876");
+        plainAccessValidator.parse(allTopicConfigAdminRequest, "192.168.0.1:9876", CLIENT_ID);
 
     }
 
@@ -242,7 +244,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -263,7 +265,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -283,7 +285,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -304,7 +306,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "192.168.1.1:9876");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "192.168.1.1:9876", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -339,7 +341,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -359,7 +361,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -379,7 +381,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -399,7 +401,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "123.4.5.6", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -424,7 +426,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "192.168.1.1");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "192.168.1.1", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -449,7 +451,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "192.168.1.1");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "192.168.1.1", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -468,7 +470,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), whiteRemoteAddress);
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), whiteRemoteAddress, CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();
@@ -1046,7 +1048,7 @@ public class PlainAccessValidatorTest {
         buf = ByteBuffer.allocate(buf.limit() - buf.position()).put(buf);
         buf.position(0);
         try {
-            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "1.1.1.1:9876");
+            PlainAccessResource accessResource = (PlainAccessResource) plainAccessValidator.parse(RemotingCommand.decode(buf), "1.1.1.1:9876", CLIENT_ID);
             plainAccessValidator.validate(accessResource);
         } catch (RemotingCommandException e) {
             e.printStackTrace();

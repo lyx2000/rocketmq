@@ -61,6 +61,7 @@ public class AuthenticationInterceptor implements ServerInterceptor {
                             .requestId(InterceptorConstants.METADATA.get(Context.current()).get(InterceptorConstants.REQUEST_ID))
                             .language(InterceptorConstants.METADATA.get(Context.current()).get(InterceptorConstants.LANGUAGE))
                             .clientVersion(InterceptorConstants.METADATA.get(Context.current()).get(InterceptorConstants.CLIENT_VERSION))
+                            .clientId(InterceptorConstants.METADATA.get(Context.current()).get(InterceptorConstants.CLIENT_ID))
                             .protocol(InterceptorConstants.METADATA.get(Context.current()).get(InterceptorConstants.PROTOCOL_VERSION))
                             .requestCode(RequestMapping.map(messageV3.getDescriptorForType().getFullName()))
                             .build();

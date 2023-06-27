@@ -29,12 +29,13 @@ public class AuthenticationHeader {
     private String requestId;
     private String language;
     private String clientVersion;
+    private String clientId;
     private String protocol;
     private int requestCode;
 
     AuthenticationHeader(final String remoteAddress, final String tenantId, final String namespace,
         final String authorization, final String datetime, final String sessionToken, final String requestId,
-        final String language, final String clientVersion, final String protocol, final int requestCode) {
+        final String language, final String clientVersion, final String clientId, final String protocol, final int requestCode) {
         this.remoteAddress = remoteAddress;
         this.tenantId = tenantId;
         this.namespace = namespace;
@@ -44,6 +45,7 @@ public class AuthenticationHeader {
         this.requestId = requestId;
         this.language = language;
         this.clientVersion = clientVersion;
+        this.clientId = clientId;
         this.protocol = protocol;
         this.requestCode = requestCode;
     }
@@ -58,6 +60,7 @@ public class AuthenticationHeader {
         private String requestId;
         private String language;
         private String clientVersion;
+        private String clientId;
         private String protocol;
         private int requestCode;
 
@@ -109,6 +112,11 @@ public class AuthenticationHeader {
             return this;
         }
 
+        public AuthenticationHeader.MetadataHeaderBuilder clientId(final String clientId) {
+            this.clientId = clientId;
+            return this;
+        }
+
         public AuthenticationHeader.MetadataHeaderBuilder protocol(final String protocol) {
             this.protocol = protocol;
             return this;
@@ -121,7 +129,7 @@ public class AuthenticationHeader {
 
         public AuthenticationHeader build() {
             return new AuthenticationHeader(this.remoteAddress, this.tenantId, this.namespace, this.authorization,
-                this.datetime, this.sessionToken, this.requestId, this.language, this.clientVersion, this.protocol,
+                this.datetime, this.sessionToken, this.requestId, this.language, this.clientVersion, this.clientId, this.protocol,
                 this.requestCode);
         }
     }
@@ -164,6 +172,10 @@ public class AuthenticationHeader {
 
     public String getClientVersion() {
         return this.clientVersion;
+    }
+
+    public String getClientId() {
+        return this.clientId;
     }
 
     public String getProtocol() {
@@ -210,6 +222,10 @@ public class AuthenticationHeader {
         this.clientVersion = clientVersion;
     }
 
+    public void setClientId(final String clientId) {
+        this.clientId = clientId;
+    }
+
     public void setProtocol(final String protocol) {
         this.protocol = protocol;
     }
@@ -230,6 +246,7 @@ public class AuthenticationHeader {
             .add("requestId", requestId)
             .add("language", language)
             .add("clientVersion", clientVersion)
+            .add("clientId", clientId)
             .add("protocol", protocol)
             .add("requestCode", requestCode)
             .toString();

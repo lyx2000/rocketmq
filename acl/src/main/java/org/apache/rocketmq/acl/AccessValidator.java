@@ -33,9 +33,10 @@ public interface AccessValidator {
      *
      * @param request
      * @param remoteAddr
+     * @param clientId
      * @return Plain access resource result,include access key,signature and some other access attributes.
      */
-    AccessResource parse(RemotingCommand request, String remoteAddr);
+    AccessResource parse(RemotingCommand request, String remoteAddr, String clientId);
 
     /**
      * Parse to get the AccessResource from gRPC protocol

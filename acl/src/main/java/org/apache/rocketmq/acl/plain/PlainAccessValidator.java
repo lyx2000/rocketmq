@@ -36,8 +36,8 @@ public class PlainAccessValidator implements AccessValidator {
     }
 
     @Override
-    public AccessResource parse(RemotingCommand request, String remoteAddr) {
-        return PlainAccessResource.parse(request, remoteAddr);
+    public AccessResource parse(RemotingCommand request, String remoteAddr, String clientId) {
+        return PlainAccessResource.parse(request, remoteAddr, clientId);
     }
 
     @Override

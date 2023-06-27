@@ -111,4 +111,20 @@ public class Permission {
     public static boolean needAdminPerm(Integer code) {
         return ADMIN_CODE.contains(code);
     }
+
+    public static String parsePermFromByte(Byte permByte) {
+        if (permByte == null) {
+            return AclConstants.DENY;
+        }
+        switch (permByte) {
+            case Permission.PUB:
+                return AclConstants.PUB;
+            case Permission.SUB:
+                return AclConstants.SUB;
+            case Permission.ANY:
+                return AclConstants.ANY;
+            default:
+                return AclConstants.DENY;
+        }
+    }
 }

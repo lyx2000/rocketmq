@@ -48,9 +48,12 @@ import org.apache.rocketmq.acl.common.AuthenticationHeader;
 import org.apache.rocketmq.acl.common.AuthorizationHeader;
 import org.apache.rocketmq.acl.common.Permission;
 import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.acl.event.detail.AccessDeniedEventDetail;
 import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.PlainAccessConfig;
+import org.apache.rocketmq.common.event.EventTrackerManager;
+import org.apache.rocketmq.common.event.EventType;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.protocol.NamespaceUtil;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
@@ -93,10 +96,12 @@ public class PlainAccessResource implements AccessResource {
 
     private String recognition;
 
+    private String clientId;
+
     public PlainAccessResource() {
     }
 
-    public static PlainAccessResource parse(RemotingCommand request, String remoteAddr) {
+    public static PlainAccessResource parse(RemotingCommand request, String remoteAddr, String clientId) {
         PlainAccessResource accessResource = new PlainAccessResource();
         if (remoteAddr != null && remoteAddr.contains(":")) {
             accessResource.setWhiteRemoteAddress(remoteAddr.substring(0, remoteAddr.lastIndexOf(':')));
@@ -114,6 +119,7 @@ public class PlainAccessResource implements AccessResource {
         accessResource.setAccessKey(request.getExtFields().get(SessionCredentials.ACCESS_KEY));
         accessResource.setSignature(request.getExtFields().get(SessionCredentials.SIGNATURE));
         accessResource.setSecretToken(request.getExtFields().get(SessionCredentials.SECURITY_TOKEN));
+        accessResource.setClientId(clientId);
 
         try {
             switch (request.getCode()) {
@@ -177,6 +183,11 @@ public class PlainAccessResource implements AccessResource {
 
             }
         } catch (Throwable t) {
+            AccessDeniedEventDetail deniedEventDetail = new AccessDeniedEventDetail(AccessDeniedEventDetail.EventType.WRONG_ACL_CONFIG,
+                clientId,
+                accessResource.getAccessKey(),
+                remoteAddr);
+            EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
             throw new AclException(t.getMessage(), t);
         }
 
@@ -203,16 +214,24 @@ public class PlainAccessResource implements AccessResource {
         } else {
             accessResource.setWhiteRemoteAddress(remoteAddress);
         }
+
+        AccessDeniedEventDetail deniedEventDetail = new AccessDeniedEventDetail(AccessDeniedEventDetail.EventType.WRONG_ACL_CONFIG,
+            header.getClientId(),
+            header.getAuthorization(),
+            header.getRemoteAddress());
+
         try {
             AuthorizationHeader authorizationHeader = new AuthorizationHeader(header.getAuthorization());
             accessResource.setAccessKey(authorizationHeader.getAccessKey());
             accessResource.setSignature(authorizationHeader.getSignature());
         } catch (DecoderException e) {
+            EventTrackerManager.trackEvent(EventType.ACL_ACCESS_EVENT, deniedEventDetail);
             throw new AclException(e.getMessage(), e);
         }
         accessResource.setSecretToken(header.getSessionToken());
         accessResource.setRequestCode(header.getRequestCode());
         accessResource.setContent(header.getDatetime().getBytes(StandardCharsets.UTF_8));
+        accessResource.setClientId(header.getClientId());
 
         try {
             String rpcFullName = messageV3.getDescriptorForType().getFullName();
@@ -459,5 +478,13 @@ public class PlainAccessResource implements AccessResource {
 
     public void setContent(byte[] content) {
         this.content = content;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 }

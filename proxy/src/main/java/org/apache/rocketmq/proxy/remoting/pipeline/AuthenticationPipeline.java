@@ -38,7 +38,7 @@ public class AuthenticationPipeline implements RequestPipeline {
         ProxyConfig config = ConfigurationManager.getProxyConfig();
         if (config.isEnableACL()) {
             for (AccessValidator accessValidator : accessValidatorList) {
-                AccessResource accessResource = accessValidator.parse(request, context.getRemoteAddress());
+                AccessResource accessResource = accessValidator.parse(request, context.getRemoteAddress(), context.getClientID());
                 accessValidator.validate(accessResource);
             }
         }
