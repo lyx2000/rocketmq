@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack;
-
-import org.apache.rocketmq.broker.eventtrack.event.EventDetail;
+package org.apache.rocketmq.common.event;
 
 public class EventContext {
     private long timeStamp;

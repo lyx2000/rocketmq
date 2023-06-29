@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack.listener;
+package org.apache.rocketmq.broker.event.listener;
 
 import org.apache.rocketmq.broker.client.SubscriptionChangeListener;
 import org.apache.rocketmq.broker.client.SubscriptionEvent;
-import org.apache.rocketmq.broker.eventtrack.EventTrackerManager;
-import org.apache.rocketmq.broker.eventtrack.EventType;
-import org.apache.rocketmq.broker.eventtrack.event.SubscriptionChangeEventDetail;
+import org.apache.rocketmq.common.event.EventTrackerManager;
+import org.apache.rocketmq.common.event.EventType;
+import org.apache.rocketmq.broker.event.detail.SubscriptionChangeEventDetail;
 import org.apache.rocketmq.remoting.protocol.heartbeat.SubscriptionData;
 
 public class SubscriptionEventTrackListener implements SubscriptionChangeListener {

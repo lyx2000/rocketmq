@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack.listener;
+package org.apache.rocketmq.broker.event.listener;
 
 import org.apache.rocketmq.broker.client.ClientChannelInfo;
 import org.apache.rocketmq.broker.client.ClientOfflineType;
 import org.apache.rocketmq.broker.client.ProducerChangeListener;
 import org.apache.rocketmq.broker.client.ProducerGroupEvent;
-import org.apache.rocketmq.broker.eventtrack.EventTrackerManager;
-import org.apache.rocketmq.broker.eventtrack.EventType;
-import org.apache.rocketmq.broker.eventtrack.event.ProducerClientEventDetail;
+import org.apache.rocketmq.common.event.EventTrackerManager;
+import org.apache.rocketmq.common.event.EventType;
+import org.apache.rocketmq.broker.event.detail.ProducerClientEventDetail;
 
 public class ProducerEventTrackListener implements ProducerChangeListener {
     @Override

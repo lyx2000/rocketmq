@@ -14,12 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack.event;
+package org.apache.rocketmq.broker.event.detail;
 
 import java.util.Set;
 import org.apache.rocketmq.broker.client.ClientChannelInfo;
 import org.apache.rocketmq.broker.client.ClientOfflineType;
 import org.apache.rocketmq.broker.client.ConsumerGroupEvent;
+import org.apache.rocketmq.common.event.EventDetail;
 
 public class ConsumerClientEventDetail implements EventDetail {
 

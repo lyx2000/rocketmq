@@ -14,22 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack;
+package org.apache.rocketmq.common.event;
 
-public enum EventType {
+import com.alibaba.fastjson.JSON;
+import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.logging.org.slf4j.Logger;
+import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 
-    CONSUMER_GROUP_EVENT,
+public class LogEventTracker implements EventTracker {
 
-    CONSUMER_GROUP_CLIENT_EVENT,
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.ROCKETMQ_EVENT_LOGGER);
 
-    SUBSCRIPTION_EVENT,
-
-    PRODUCER_CLIENT_EVENT,
-
-    TOPIC_EVENT,
-
-    STARTUP_EVENT,
-
-    SHUTDOWN_EVENT
-
+    @Override
+    public void trackEvent(EventContext eventContext) {
+        log.info(JSON.toJSONString(eventContext));
+    }
 }

@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack.event;
+package org.apache.rocketmq.broker.event.detail;
 
 import java.util.Map;
+import org.apache.rocketmq.common.event.EventDetail;
 import org.apache.rocketmq.broker.topic.TopicEvent;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.attribute.TopicMessageType;

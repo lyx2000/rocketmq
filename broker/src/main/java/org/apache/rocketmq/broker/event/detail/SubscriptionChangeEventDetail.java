@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack.event;
+package org.apache.rocketmq.broker.event.detail;
 
 import org.apache.rocketmq.broker.client.SubscriptionEvent;
+import org.apache.rocketmq.common.event.EventDetail;
 import org.apache.rocketmq.remoting.protocol.heartbeat.SubscriptionData;
 
 public class SubscriptionChangeEventDetail implements EventDetail {

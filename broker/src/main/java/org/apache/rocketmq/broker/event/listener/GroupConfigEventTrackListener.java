@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack.listener;
+package org.apache.rocketmq.broker.event.listener;
 
-import org.apache.rocketmq.broker.eventtrack.EventTrackerManager;
-import org.apache.rocketmq.broker.eventtrack.EventType;
-import org.apache.rocketmq.broker.eventtrack.event.ConsumerGroupEventDetail;
+import org.apache.rocketmq.common.event.EventTrackerManager;
+import org.apache.rocketmq.common.event.EventType;
+import org.apache.rocketmq.broker.event.detail.ConsumerGroupEventDetail;
 import org.apache.rocketmq.broker.subscription.SubscriptionGroupConfigChangeListener;
 import org.apache.rocketmq.broker.subscription.SubscriptionGroupConfigEvent;
 import org.apache.rocketmq.remoting.protocol.subscription.SubscriptionGroupConfig;

@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack;
+package org.apache.rocketmq.common.event;
 
 import java.util.List;
-import org.apache.rocketmq.broker.eventtrack.event.EventDetail;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.utils.ServiceProvider;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
@@ -38,7 +37,7 @@ public class EventTrackerManager {
     static {
         eventTrackers = ServiceProvider.load(EventTracker.class);
         if (eventTrackers.isEmpty()) {
-            log.info("ServiceProvider loaded no EventTracker, using default org.apache.rocketmq.broker.eventtrack.LogEventTracker");
+            log.info("ServiceProvider loaded no EventTracker, using default org.apache.rocketmq.common.eventtrack.LogEventTracker");
             eventTrackers.add(new LogEventTracker());
         }
 

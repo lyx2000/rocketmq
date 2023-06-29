@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.broker.eventtrack.listener;
+package org.apache.rocketmq.broker.event.listener;
 
 import java.util.Set;
 import org.apache.rocketmq.broker.client.ClientChannelInfo;
 import org.apache.rocketmq.broker.client.ClientOfflineType;
 import org.apache.rocketmq.broker.client.ConsumerGroupEvent;
 import org.apache.rocketmq.broker.client.ConsumerIdsChangeListener;
-import org.apache.rocketmq.broker.eventtrack.EventTrackerManager;
-import org.apache.rocketmq.broker.eventtrack.EventType;
-import org.apache.rocketmq.broker.eventtrack.event.ConsumerClientEventDetail;
-import org.apache.rocketmq.broker.eventtrack.event.ConsumerGroupEventDetail;
+import org.apache.rocketmq.common.event.EventTrackerManager;
+import org.apache.rocketmq.common.event.EventType;
+import org.apache.rocketmq.broker.event.detail.ConsumerClientEventDetail;
+import org.apache.rocketmq.broker.event.detail.ConsumerGroupEventDetail;
 
 import static org.apache.rocketmq.broker.client.ConsumerGroupEvent.CLIENT_REGISTER;
 import static org.apache.rocketmq.broker.client.ConsumerGroupEvent.CLIENT_UNREGISTER;
