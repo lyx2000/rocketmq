@@ -50,6 +50,6 @@ public class LoggerName {
     public static final String STDOUT_LOGGER_NAME = "STDOUT";
     public static final String PROXY_LOGGER_NAME = "RocketmqProxy";
     public static final String PROXY_WATER_MARK_LOGGER_NAME = "RocketmqProxyWatermark";
-
     public static final String ROCKETMQ_EVENT_LOGGER = "RocketmqEventLogger";
+    public static final String ROCKETMQ_COLDCTR_LOGGER_NAME = "RocketmqColdCtr";
 }

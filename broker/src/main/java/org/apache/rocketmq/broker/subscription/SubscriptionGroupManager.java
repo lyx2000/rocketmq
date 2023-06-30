@@ -16,8 +16,11 @@
  */
 package org.apache.rocketmq.broker.subscription;
 
+import com.google.common.collect.ImmutableMap;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -28,6 +31,8 @@ import org.apache.rocketmq.broker.BrokerPathConfigHelper;
 import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.common.ConfigManager;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.SubscriptionGroupAttributes;
+import org.apache.rocketmq.common.attribute.AttributeUtil;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.topic.TopicValidator;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
@@ -115,6 +120,17 @@ public class SubscriptionGroupManager extends ConfigManager {
     }
 
     public void updateSubscriptionGroupConfig(final SubscriptionGroupConfig config) {
+        Map<String, String> newAttributes = request(config);
+        Map<String, String> currentAttributes = current(config.getGroupName());
+
+        Map<String, String> finalAttributes = AttributeUtil.alterCurrentAttributes(
+            this.subscriptionGroupTable.get(config.getGroupName()) == null,
+            SubscriptionGroupAttributes.ALL,
+            ImmutableMap.copyOf(currentAttributes),
+            ImmutableMap.copyOf(newAttributes));
+
+        config.setAttributes(finalAttributes);
+
         SubscriptionGroupConfig old = this.subscriptionGroupTable.put(config.getGroupName(), config);
         if (old != null) {
             log.info("update subscription group config, old: {} new: {}", old, config);
@@ -308,11 +324,8 @@ public class SubscriptionGroupManager extends ConfigManager {
         }
     }
 
-    public void setSubscriptionGroupTable(ConcurrentMap<String, SubscriptionGroupConfig> otherSubscriptionGroupTable) {
-        this.subscriptionGroupTable.clear();
-        for (String key : otherSubscriptionGroupTable.keySet()) {
-            this.subscriptionGroupTable.put(key, otherSubscriptionGroupTable.get(key));
-        }
+    public void setSubscriptionGroupTable(ConcurrentMap<String, SubscriptionGroupConfig> subscriptionGroupTable) {
+        this.subscriptionGroupTable = subscriptionGroupTable;
     }
 
     public boolean containsSubscriptionGroup(String group) {
@@ -334,6 +347,24 @@ public class SubscriptionGroupManager extends ConfigManager {
                 listener.handle(event, config);
             } catch (Throwable t) {
                 log.error("err when call subscriptionGroupChangeListener", t);
+            }
+        }
+    }
+
+    private Map<String, String> request(SubscriptionGroupConfig subscriptionGroupConfig) {
+        return subscriptionGroupConfig.getAttributes() == null ? new HashMap<>() : subscriptionGroupConfig.getAttributes();
+    }
+
+    private Map<String, String> current(String groupName) {
+        SubscriptionGroupConfig subscriptionGroupConfig = this.subscriptionGroupTable.get(groupName);
+        if (subscriptionGroupConfig == null) {
+            return new HashMap<>();
+        } else {
+            Map<String, String> attributes = subscriptionGroupConfig.getAttributes();
+            if (attributes == null) {
+                return new HashMap<>();
+            } else {
+                return attributes;
             }
         }
     }

@@ -201,7 +201,7 @@ public class ReceiptHandleProcessor extends AbstractStartAndShutdown {
                 });
             } else {
                 SubscriptionGroupConfig subscriptionGroupConfig =
-                    messagingProcessor.getMetadataService().getSubscriptionGroupConfig(messageReceiptHandle.getGroup());
+                    messagingProcessor.getMetadataService().getSubscriptionGroupConfig(context, messageReceiptHandle.getGroup());
                 if (subscriptionGroupConfig == null) {
                     log.error("group's subscriptionGroupConfig is null when renew. handle: {}", messageReceiptHandle);
                     return CompletableFuture.completedFuture(null);
@@ -240,25 +240,23 @@ public class ReceiptHandleProcessor extends AbstractStartAndShutdown {
         return this.messagingProcessor.findConsumerChannel(createContext("JudgeClientOnline"), groupKey.group, groupKey.channel) == null;
     }
 
-    public void addReceiptHandle(Channel channel, String group, String msgID, String receiptHandle,
-        MessageReceiptHandle messageReceiptHandle) {
-        this.addReceiptHandle(new ReceiptHandleGroupKey(channel, group), msgID, receiptHandle, messageReceiptHandle);
+    public void addReceiptHandle(ProxyContext ctx, Channel channel, String group, String msgID, MessageReceiptHandle messageReceiptHandle) {
+        this.addReceiptHandle(ctx, new ReceiptHandleGroupKey(channel, group), msgID, messageReceiptHandle);
     }
 
-    protected void addReceiptHandle(ReceiptHandleGroupKey key, String msgID, String receiptHandle,
-        MessageReceiptHandle messageReceiptHandle) {
+    protected void addReceiptHandle(ProxyContext ctx, ReceiptHandleGroupKey key, String msgID, MessageReceiptHandle messageReceiptHandle) {
         if (key == null) {
             return;
         }
         ConcurrentHashMapUtils.computeIfAbsent(this.receiptHandleGroupMap, key,
-            k -> new ReceiptHandleGroup()).put(msgID, receiptHandle, messageReceiptHandle);
+            k -> new ReceiptHandleGroup()).put(msgID, messageReceiptHandle);
     }
 
-    public MessageReceiptHandle removeReceiptHandle(Channel channel, String group, String msgID, String receiptHandle) {
-        return this.removeReceiptHandle(new ReceiptHandleGroupKey(channel, group), msgID, receiptHandle);
+    public MessageReceiptHandle removeReceiptHandle(ProxyContext ctx, Channel channel, String group, String msgID, String receiptHandle) {
+        return this.removeReceiptHandle(ctx, new ReceiptHandleGroupKey(channel, group), msgID, receiptHandle);
     }
 
-    protected MessageReceiptHandle removeReceiptHandle(ReceiptHandleGroupKey key, String msgID, String receiptHandle) {
+    protected MessageReceiptHandle removeReceiptHandle(ProxyContext ctx, ReceiptHandleGroupKey key, String msgID, String receiptHandle) {
         if (key == null) {
             return null;
         }
